@@ -220,38 +220,55 @@ const getInitialData = (): Transacao[] => {
 };
 
 // --- Components Auxiliares ---
+const getSolidColor = (colorStr: string) => {
+  if (!colorStr || typeof colorStr !== 'string') return '#3B82F6';
+  if (colorStr.includes('Blue') || colorStr.includes('pie1') || colorStr.includes('colorRec')) return '#3B82F6';
+  if (colorStr.includes('Green') || colorStr.includes('pie2')) return '#10B981';
+  if (colorStr.includes('Yellow') || colorStr.includes('pie3')) return '#F59E0B';
+  if (colorStr.includes('Purple') || colorStr.includes('pie4')) return '#8B5CF6';
+  if (colorStr.includes('Red') || colorStr.includes('colorDesp')) return '#EF4444';
+  if (colorStr.includes('Atingido')) return '#3B82F6';
+  if (colorStr.startsWith('url')) return '#3B82F6';
+  return colorStr;
+};
+
 const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
   if (active && payload && payload.length) {
     return (
       <div
-        className={`p-3 ${isDarkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"} border-2 rounded-xl shadow-lg backdrop-blur-xl bg-opacity-95`}
+        className={`p-3.5 ${isDarkMode ? "bg-gray-950/80 border-gray-800/60 text-gray-100" : "bg-white/90 border-gray-200/50 text-gray-800"} border shadow-xl backdrop-blur-md rounded-2xl`}
       >
-        <p className="text-[11px] font-medium  tracking-normal text-gray-400 mb-2">
-          {label}
-        </p>
-        <div className="space-y-1.5">
-          {payload.map((entry: any, index: number) => (
-            <div
-              key={index}
-              className="flex items-center justify-between gap-2"
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: entry.color }}
-                />
-                <span className="text-xs font-medium  text-gray-600 dark:text-gray-300">
-                  {entry.name}
+        {label && (
+          <p className="text-[10px] font-semibold tracking-wider uppercase text-gray-500 mb-2.5">
+            {label}
+          </p>
+        )}
+        <div className="flex flex-col gap-2">
+          {payload.map((entry: any, index: number) => {
+            const solidColor = getSolidColor(entry.color);
+            return (
+              <div
+                key={index}
+                className="flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full shadow-sm"
+                    style={{ backgroundColor: solidColor }}
+                  />
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    {entry.name || entry.dataKey}
+                  </span>
+                </div>
+                <span
+                  className="text-sm font-bold"
+                  style={{ color: solidColor }}
+                >
+                  {formatarMoeda(entry.value)}
                 </span>
               </div>
-              <span
-                className="text-xs font-medium"
-                style={{ color: entry.color }}
-              >
-                {formatarMoeda(entry.value)}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -1122,6 +1139,28 @@ export default function App() {
                               layout="vertical"
                               margin={{ left: -10, right: 30 }}
                             >
+                              <defs>
+                                <linearGradient id="barBlue" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#3B82F6" />
+                                  <stop offset="100%" stopColor="#60A5FA" />
+                                </linearGradient>
+                                <linearGradient id="barRed" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#EF4444" />
+                                  <stop offset="100%" stopColor="#F87171" />
+                                </linearGradient>
+                                <linearGradient id="barGreen" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#10B981" />
+                                  <stop offset="100%" stopColor="#34D399" />
+                                </linearGradient>
+                                <linearGradient id="barYellow" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#F59E0B" />
+                                  <stop offset="100%" stopColor="#FBBF24" />
+                                </linearGradient>
+                                <linearGradient id="barPurple" x1="0" y1="0" x2="1" y2="0">
+                                  <stop offset="0%" stopColor="#8B5CF6" />
+                                  <stop offset="100%" stopColor="#A78BFA" />
+                                </linearGradient>
+                              </defs>
                               <XAxis type="number" hide />
                               <YAxis
                                 dataKey="nome"
@@ -1154,11 +1193,11 @@ export default function App() {
                                     key={`cell-${index}`}
                                     fill={
                                       [
-                                        "#3B82F6",
-                                        "#EF4444",
-                                        "#10B981",
-                                        "#F59E0B",
-                                        "#8B5CF6",
+                                        "url(#barBlue)",
+                                        "url(#barRed)",
+                                        "url(#barGreen)",
+                                        "url(#barYellow)",
+                                        "url(#barPurple)",
                                       ][index % 5]
                                     }
                                   />
@@ -1353,14 +1392,14 @@ export default function App() {
                                 y2="1"
                               >
                                 <stop
-                                  offset="5%"
-                                  stopColor="#3B82F6"
-                                  stopOpacity={0.3}
+                                  offset="0%"
+                                  stopColor="#2563EB"
+                                  stopOpacity={0.6}
                                 />
                                 <stop
-                                  offset="95%"
+                                  offset="100%"
                                   stopColor="#3B82F6"
-                                  stopOpacity={0}
+                                  stopOpacity={0.05}
                                 />
                               </linearGradient>
                               <linearGradient
@@ -1371,14 +1410,14 @@ export default function App() {
                                 y2="1"
                               >
                                 <stop
-                                  offset="5%"
-                                  stopColor="#EF4444"
-                                  stopOpacity={0.3}
+                                  offset="0%"
+                                  stopColor="#DC2626"
+                                  stopOpacity={0.6}
                                 />
                                 <stop
-                                  offset="95%"
+                                  offset="100%"
                                   stopColor="#EF4444"
-                                  stopOpacity={0}
+                                  stopOpacity={0.05}
                                 />
                               </linearGradient>
                             </defs>
@@ -1407,24 +1446,26 @@ export default function App() {
                             <Area
                               type="monotone"
                               dataKey="receitas"
-                              stroke="#3B82F6"
+                              stroke="#2563EB"
                               strokeWidth={3}
                               fillOpacity={1}
                               fill="url(#colorRec)"
                               name="Receitas"
                               isAnimationActive={true}
                               animationDuration={1200}
+                              activeDot={{ r: 6, strokeWidth: 0, fill: '#2563EB' }}
                             />
                             <Area
                               type="monotone"
                               dataKey="despesas"
-                              stroke="#EF4444"
+                              stroke="#DC2626"
                               strokeWidth={3}
                               fillOpacity={1}
                               fill="url(#colorDesp)"
                               name="Despesas"
                               isAnimationActive={true}
                               animationDuration={1200}
+                              activeDot={{ r: 6, strokeWidth: 0, fill: '#DC2626' }}
                             />
                           </AreaChart>
                         </ResponsiveContainer>
@@ -1450,27 +1491,46 @@ export default function App() {
                           className="outline-none"
                         >
                           <PieChart>
+                            <defs>
+                              <linearGradient id="pie1" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#2563EB" />
+                                <stop offset="100%" stopColor="#60A5FA" />
+                              </linearGradient>
+                              <linearGradient id="pie2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#059669" />
+                                <stop offset="100%" stopColor="#34D399" />
+                              </linearGradient>
+                              <linearGradient id="pie3" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#D97706" />
+                                <stop offset="100%" stopColor="#FBBF24" />
+                              </linearGradient>
+                              <linearGradient id="pie4" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#7C3AED" />
+                                <stop offset="100%" stopColor="#A78BFA" />
+                              </linearGradient>
+                            </defs>
                             <Pie
                               data={receitaPorFonte}
                               cx="50%"
                               cy="50%"
                               innerRadius={30}
                               outerRadius={50}
-                              paddingAngle={5}
+                              paddingAngle={6}
                               dataKey="valor"
                               isAnimationActive={true}
                               animationDuration={1500}
                               stroke="none"
+                              cornerRadius={4}
                             >
                               {receitaPorFonte.map((_, index) => (
                                 <Cell
                                   key={`cell-${index}`}
                                   fill={
                                     [
-                                      "#3B82F6",
-                                      "#10B981",
-                                      "#F59E0B",
-                                      "#8B5CF6",
+                                      "url(#pie1)",
+                                      "url(#pie2)",
+                                      "url(#pie3)",
+                                      "url(#pie4)",
                                     ][index % 4]
                                   }
                                 />
@@ -1512,6 +1572,12 @@ export default function App() {
                         className="outline-none"
                       >
                         <BarChart data={metaFulfillment}>
+                          <defs>
+                            <linearGradient id="barAtingido" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#3B82F6" />
+                              <stop offset="100%" stopColor="#2563EB" />
+                            </linearGradient>
+                          </defs>
                           <XAxis
                             dataKey="dia"
                             axisLine={false}
@@ -1541,10 +1607,10 @@ export default function App() {
                             {metaFulfillment.map((entry, index) => (
                               <Cell
                                 key={`cell-${index}`}
-                                fill={entry.atingiu ? "#3B82F6" : "#9CA3AF"}
-                                fillOpacity={entry.atingiu ? 1 : 0.3}
+                                fill={entry.atingiu ? "url(#barAtingido)" : (isDarkMode ? "#374151" : "#E5E7EB")}
+                                fillOpacity={entry.atingiu ? 1 : (isDarkMode ? 0.6 : 0.4)}
                                 stroke={
-                                  entry.atingiu ? "#2563EB" : "transparent"
+                                  entry.atingiu ? "rgba(37, 99, 235, 0.5)" : "transparent"
                                 }
                                 strokeWidth={2}
                               />
