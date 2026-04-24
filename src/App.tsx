@@ -71,9 +71,6 @@ import {
   GraduationCap,
   FileText,
   Droplet,
-  Coffee,
-  Wrench,
-  Car,
 } from "lucide-react";
 import {
   ResponsiveContainer,
