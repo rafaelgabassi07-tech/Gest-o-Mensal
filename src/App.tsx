@@ -223,11 +223,10 @@ const getInitialData = (): Transacao[] => {
 const getSolidColor = (colorStr: string) => {
   if (!colorStr || typeof colorStr !== 'string') return '#3B82F6';
   if (colorStr.includes('Blue') || colorStr.includes('pie1') || colorStr.includes('colorRec')) return '#3B82F6';
-  if (colorStr.includes('Green') || colorStr.includes('pie2')) return '#10B981';
-  if (colorStr.includes('Yellow') || colorStr.includes('pie3')) return '#F59E0B';
+  if (colorStr.includes('Green') || colorStr.includes('pie2') || colorStr.includes('Atingido') && !colorStr.includes('NaoAtingido')) return '#10B981';
+  if (colorStr.includes('Yellow') || colorStr.includes('pie3') || colorStr.includes('NaoAtingido')) return '#F59E0B';
   if (colorStr.includes('Purple') || colorStr.includes('pie4')) return '#8B5CF6';
   if (colorStr.includes('Red') || colorStr.includes('colorDesp')) return '#EF4444';
-  if (colorStr.includes('Atingido')) return '#3B82F6';
   if (colorStr.startsWith('url')) return '#3B82F6';
   return colorStr;
 };
@@ -1574,8 +1573,12 @@ export default function App() {
                         <BarChart data={metaFulfillment}>
                           <defs>
                             <linearGradient id="barAtingido" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#3B82F6" />
-                              <stop offset="100%" stopColor="#2563EB" />
+                              <stop offset="0%" stopColor="#10B981" />
+                              <stop offset="100%" stopColor="#059669" />
+                            </linearGradient>
+                            <linearGradient id="barNaoAtingido" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#F59E0B" />
+                              <stop offset="100%" stopColor="#D97706" />
                             </linearGradient>
                           </defs>
                           <XAxis
@@ -1607,10 +1610,10 @@ export default function App() {
                             {metaFulfillment.map((entry, index) => (
                               <Cell
                                 key={`cell-${index}`}
-                                fill={entry.atingiu ? "url(#barAtingido)" : (isDarkMode ? "#374151" : "#E5E7EB")}
-                                fillOpacity={entry.atingiu ? 1 : (isDarkMode ? 0.6 : 0.4)}
+                                fill={entry.atingiu ? "url(#barAtingido)" : "url(#barNaoAtingido)"}
+                                fillOpacity={entry.atingiu ? 1 : 0.8}
                                 stroke={
-                                  entry.atingiu ? "rgba(37, 99, 235, 0.5)" : "transparent"
+                                  entry.atingiu ? "rgba(16, 185, 129, 0.5)" : "rgba(245, 158, 11, 0.5)"
                                 }
                                 strokeWidth={2}
                               />
