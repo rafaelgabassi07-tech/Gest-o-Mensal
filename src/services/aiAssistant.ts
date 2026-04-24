@@ -1,4 +1,7 @@
+import { GoogleGenAI, Type } from "@google/genai";
 import { Transacao, Categoria, ConfiguracaoAI } from "../types";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export interface AIInsight {
   tipo: "alerta" | "sucesso" | "info" | "dica" | "financeiro";
@@ -16,47 +19,43 @@ export interface AIChatMessage {
 }
 
 export function analisarSentimento(texto: string): APSentiment {
-  const palavrasPositivas = [
-    "bom",
-    "ótimo",
-    "excelente",
-    "feliz",
-    "ganhei",
-    "lucro",
-    "meta",
-    "sucesso",
-    "fácil",
-    "ajuda",
-    "obrigado",
-  ];
-  const palavrasNegativas = [
-    "ruim",
-    "difícil",
-    "perda",
-    "prejuízo",
-    "triste",
-    "erro",
-    "problema",
-    "caro",
-    "gasto",
-    "baixo",
-    "alerta",
-    "socorro",
-  ];
-
+  const palavrasPositivas = ["bom", "ótimo", "excelente", "feliz", "ganhei", "lucro", "meta", "sucesso", "fácil", "ajuda", "obrigado"];
+  const palavrasNegativas = ["ruim", "difícil", "perda", "prejuízo", "triste", "erro", "problema", "caro", "gasto", "baixo", "alerta", "socorro"];
   const lower = texto.toLowerCase();
   let score = 0;
-
-  palavrasPositivas.forEach((p) => {
-    if (lower.includes(p)) score++;
-  });
-  palavrasNegativas.forEach((p) => {
-    if (lower.includes(p)) score--;
-  });
-
+  palavrasPositivas.forEach((p) => { if (lower.includes(p)) score++; });
+  palavrasNegativas.forEach((p) => { if (lower.includes(p)) score--; });
   if (score > 0) return "positivo";
   if (score < 0) return "negativo";
   return "neutro";
+}
+
+function truncateString(str: string, num: number) {
+  if (str.length <= num) {
+    return str;
+  }
+  return str.slice(0, num) + '...';
+}
+
+function buildTransactionContext(transacoes: Transacao[], limit: number = 30) {
+  const recentes = transacoes.slice(0, limit);
+  const totaisMes = transacoes.filter(t => t.data.startsWith(new Date().toISOString().slice(0, 7))).reduce(
+    (acc, t) => {
+      if (t.tipo === 'receita') acc.receitas += t.valor;
+      else acc.despesas += t.valor;
+      return acc;
+    },
+    { receitas: 0, despesas: 0 }
+  );
+  
+  return `
+Resumo do mês atual:
+Receitas: R$ ${totaisMes.receitas.toFixed(2)}
+Despesas: R$ ${totaisMes.despesas.toFixed(2)}
+
+Últimas transações (até ${limit}):
+${recentes.map(t => `- ${t.data}: [${t.tipo.toUpperCase()}] ${t.categoria} - R$ ${t.valor.toFixed(2)} (${truncateString(t.descricao, 20)})`).join('\n')}
+`;
 }
 
 export async function responderChat(
@@ -66,299 +65,134 @@ export async function responderChat(
   config: ConfiguracaoAI,
   historico: AIChatMessage[] = [],
 ): Promise<AIChatMessage> {
-  const sentimento = analisarSentimento(mensagem);
-  const lower = mensagem.toLowerCase();
-  const formatador = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-  const hoje = new Date().toISOString().split("T")[0];
+  const userContext = buildTransactionContext(transacoes);
 
-  // Métricas
-  const totalReceitas = transacoes
-    .filter((t) => t.tipo === "receita")
-    .reduce((acc, t) => acc + t.valor, 0);
-  const totalDespesas = transacoes
-    .filter((t) => t.tipo === "despesa")
-    .reduce((acc, t) => acc + t.valor, 0);
-  const lucroAcumulado = totalReceitas - totalDespesas;
-  const ganhoHoje = transacoes
-    .filter((t) => t.data === hoje && t.tipo === "receita")
-    .reduce((acc, t) => acc + t.valor, 0);
-  const countHoje = transacoes.filter(
-    (t) => t.data === hoje && t.tipo === "receita",
-  ).length;
-  const mediaReceitaPorCorrida =
-    countHoje > 0
-      ? totalReceitas / transacoes.filter((t) => t.tipo === "receita").length
-      : 0;
+  let systemInstruction = `Você é um assistente financeiro de IA para um motorista de aplicativo.
+Sua personalidade é ${config.tomVoz}. 
+O nível de detalhe da sua resposta deve ser ${config.nivelDetalhe}.
+Foque em ${config.focarEmGanhos ? 'maximizar ganhos' : ''} ${config.focarEmGastos ? 'e reduzir custos' : ''}.
 
-  let resposta = "";
+A meta diária do motorista é: R$ ${metaDiaria.toFixed(2)}.
+Aqui está o contexto das finanças dele:
+${userContext}
 
-  const saudacoes = [
-    "oi",
-    "olá",
-    "ola",
-    "bom dia",
-    "boa tarde",
-    "boa noite",
-    "e ai",
-    "eaí",
-    "opa",
-  ];
-  const agradecimentos = [
-    "obrigado",
-    "obrigada",
-    "valeu",
-    "vlw",
-    "top",
-    "show",
-    "ajudou",
-  ];
-  const despedidas = [
-    "tchau",
-    "fui",
-    "flw",
-    "até mais",
-    "ate logo",
-    "ate mais",
-  ];
+Responda diretamente à pergunta do usuário orientando sobre as finanças dele, sem marcadores longos e apenas com o texto da resposta.`;
 
-  const isSaudacao = saudacoes.some((s) => lower.startsWith(s));
-  const isAgradecimento = agradecimentos.some((a) => lower.includes(a));
-  const isDespedida = despedidas.some((d) => lower.includes(d));
+  try {
+    const chat = ai.chats.create({
+      model: "gemini-3.1-pro-preview",
+      config: {
+        systemInstruction,
+        temperature: 0.7,
+      }
+    });
 
-  // Simulate a slight delay for realistic processing feel
-  await new Promise((resolve) => setTimeout(resolve, 800));
+    let messageToSend = mensagem;
 
-  if (isSaudacao) {
-    const horas = new Date().getHours();
-    const cumprimento =
-      horas < 12 ? "Bom dia" : horas < 18 ? "Boa tarde" : "Boa noite";
-    resposta = `${cumprimento}. Como posso ajudar com seus indicadores financeiros hoje? `;
-  }
-
-  if (isAgradecimento) {
-    resposta += "À disposição para auxiliar na otimização de seus resultados. ";
-  }
-
-  if (
-    lower.includes("estratégia") ||
-    lower.includes("como ganhar mais") ||
-    lower.includes("dica") ||
-    lower.includes("renda")
-  ) {
-    const melhorFonte = Object.entries(
-      transacoes
-        .filter((t) => t.tipo === "receita")
-        .reduce(
-          (acc, t) => {
-            acc[t.categoria] = (acc[t.categoria] || 0) + t.valor;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ),
-    ).sort((a, b) => b[1] - a[1])[0];
-
-    const fonteNome = melhorFonte ? melhorFonte[0] : "plataformas";
-
-    resposta += `\nDe acordo com seus registros, a categoria **${fonteNome.toUpperCase()}** apresenta o melhor desempenho. O retorno médio por entrada é de ${formatador.format(mediaReceitaPorCorrida)}. Priorizar momentos de alta demanda pode elevar sua lucratividade.`;
-  } else if (
-    lower.includes("análise") ||
-    lower.includes("meus números") ||
-    lower.includes("saúde") ||
-    lower.includes("resumo")
-  ) {
-    const margemLíquida =
-      totalReceitas > 0 ? (lucroAcumulado / totalReceitas) * 100 : 0;
-    const avaliacao =
-      margemLíquida > 50
-        ? "Excelente"
-        : margemLíquida > 30
-          ? "Saudável"
-          : "Requer atenção";
-
-    resposta += `\nSua margem de lucro atual está em **${margemLíquida.toFixed(1)}%** (${avaliacao}). O saldo acumulado é de ${formatador.format(lucroAcumulado)}. ${margemLíquida < 30 ? "Recomenda-se uma revisão rigorosa nos custos operacionais mensais." : "Seus custos estão controlados no momento."}`;
-  } else if (
-    lower.includes("meta") ||
-    lower.includes("objetivo") ||
-    lower.includes("falta quanto")
-  ) {
-    const falta = Math.max(metaDiaria - ganhoHoje, 0);
-    const pct = (ganhoHoje / metaDiaria) * 100;
-
-    if (falta > 0) {
-      resposta += `\nProgresso diário: **${pct.toFixed(1)}%**. Restam ${formatador.format(falta)} para alcançar sua meta de receita diária. Com foco, você consegue bater o objetivo.`;
-    } else {
-      resposta += `\n**Meta atingida.** O superávit de hoje excede o planejado. Qualquer entrada adicional ajuda a formar sua reserva de emergência.`;
+    // Enviar as mensagens do histórico na ordem em que ocorreram
+    for (const histMsg of historico) {
+      await chat.sendMessage({ message: histMsg.content });
     }
-  } else if (
-    lower.includes("despesa") ||
-    lower.includes("gasto") ||
-    lower.includes("caro") ||
-    lower.includes("reduzir") ||
-    lower.includes("economia")
-  ) {
-    const maioresDespesas = Object.entries(
-      transacoes
-        .filter((t) => t.tipo === "despesa")
-        .reduce(
-          (acc, t) => {
-            acc[t.categoria] = (acc[t.categoria] || 0) + t.valor;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ),
-    ).sort((a, b) => b[1] - a[1]);
-
-    const maiorDespesa = maioresDespesas.length > 0 ? maioresDespesas[0] : null;
-    const impactoCustos =
-      totalReceitas > 0 ? (totalDespesas / totalReceitas) * 100 : 0;
-
-    if (maiorDespesa) {
-      resposta += `\nIdentifiquei que sua categoria de maior gasto é **${maiorDespesa[0].toUpperCase()}** (${formatador.format(maiorDespesa[1])}). No geral, suas despesas consomem ${impactoCustos.toFixed(1)}% das suas receitas. Acompanhe esses custos de perto para não corroer seu patrimônio.`;
-    } else {
-      resposta += `\nNo momento não encontrei despesas significativas. Continue controlando os gastos!`;
-    }
-  } else if (
-    lower.includes("orçamento") ||
-    lower.includes("reserva") ||
-    lower.includes("investir") ||
-    lower.includes("futuro")
-  ) {
-    const recomendacaoReserva = lucroAcumulado * 0.3; // 30% pro futuro
-    resposta += `\nConsiderando seu saldo de ${formatador.format(lucroAcumulado)}, a regra 50-30-20 sugere que você guarde ou invista cerca de 30% do seu lucro. No momento, isso seria aproximadamente **${formatador.format(recomendacaoReserva)}**. Pensar no futuro é o primeiro passo para a liberdade financeira.`;
-  } else if (lower.includes("dica") || lower.includes("conselho")) {
-    resposta += `\n**Dica do dia:** Sempre pague a si mesmo primeiro. Ao receber seu salário ou renda principal, reserve imediatamente uma fatia para investimentos antes de começar a pagar as contas. E evite usar o cartão de crédito para compras por impulso!`;
-  } else if (isDespedida) {
-    resposta =
-      "Até logo. Estarei monitorando seus dados e à disposição em caso de dúvidas.";
-  } else if (resposta === "") {
-    resposta = `Seu saldo líquido apurado no momento é de ${formatador.format(lucroAcumulado)}. Caso deseje uma análise de metas, projeções ou custos operacionais, basta me informar.`;
+    
+    const response = await chat.sendMessage({ message: messageToSend });
+    
+    return {
+      role: "assistant",
+      content: response.text || "Não entendi.",
+      sentiment: analisarSentimento(response.text || ""),
+    };
+  } catch (error) {
+    console.error("Erro na API Gemini:", error);
+    return {
+      role: "assistant",
+      content: "Desculpe, meu servidor de IA encontrou um problema técnico. Tente novamente mais tarde.",
+      sentiment: "neutro",
+    };
   }
-
-  // Personalization logic
-  if (config.nivelDetalhe === "resumido") {
-    resposta = resposta.split(".")[0] + ".";
-  }
-
-  return {
-    role: "assistant",
-    content: resposta.trim(),
-    sentiment: sentimento,
-  };
 }
 
-export function gerarInsightsNativos(
+export async function gerarInsightsNativos(
   transacoes: Transacao[],
   metaDiaria: number,
   categoriasReceita: Categoria[],
   categoriasDespesa: Categoria[],
   config: ConfiguracaoAI,
-): AIInsight[] {
+): Promise<AIInsight[]> {
+  const userContext = buildTransactionContext(transacoes, 50);
+
+  const prompt = `Analise os seguintes dados financeiros de um motorista de aplicativo e extraia insights super relevantes e poderosos (no máximo 5).
+Os insights devem ser diretos ao ponto, observando o comportamento financeiro atual e o mês do motorista.
+Nível de detalhe: ${config.nivelDetalhe}.
+Foco: ${config.focarEmGanhos ? 'Ganhos' : ''} ${config.focarEmGastos ? 'Gastos' : ''}.
+
+Retorne ESTRITAMENTE em formato JSON que obedeça a este schema de array:
+[
+  {
+    "tipo": "alerta",
+    "titulo": "Título",
+    "mensagem": "Mensagem detalhada.",
+    "prioridade": 1
+  }
+]
+Os tipos permitidos são: alerta, sucesso, info, dica, financeiro.
+A prioridade é um número de 1 a 5, onde 1 é a maior prioridade.
+
+Dados Financeiros Atuais:
+Meta Diária Almejada: R$ ${metaDiaria.toFixed(2)}
+${userContext}
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              tipo: { type: Type.STRING, description: "alerta, sucesso, info, dica, ou financeiro" },
+              titulo: { type: Type.STRING },
+              mensagem: { type: Type.STRING },
+              prioridade: { type: Type.INTEGER },
+            },
+            required: ["tipo", "titulo", "mensagem", "prioridade"],
+          },
+        },
+      },
+    });
+
+    const jsonStr = response.text?.trim() || "[]";
+    let parsed: AIInsight[] = JSON.parse(jsonStr);
+    
+    parsed = parsed.map(p => ({
+      ...p,
+      tipo: (["alerta", "sucesso", "info", "dica", "financeiro"].includes(p.tipo) ? p.tipo : "info") as AIInsight["tipo"]
+    }));
+
+    return parsed.sort((a,b) => a.prioridade - b.prioridade).slice(0, 5);
+
+  } catch (error) {
+    console.error("Erro ao gerar insights Gemini API:", error);
+    return fallbackInsightsNativos(transacoes, metaDiaria, categoriasReceita, categoriasDespesa, config);
+  }
+}
+
+function fallbackInsightsNativos(transacoes: Transacao[], metaDiaria: number, categoriasReceita: Categoria[], categoriasDespesa: Categoria[], config: ConfiguracaoAI): AIInsight[] {
   let insights: AIInsight[] = [];
   const hoje = new Date().toISOString().split("T")[0];
-  const formatador = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-
-  // 1. Cálculo de Métricas Estratégicas
-  const transacoesMes = transacoes.filter((t) =>
-    t.data.startsWith(hoje.slice(0, 7)),
-  );
-  const ganhosMes = transacoesMes
-    .filter((t) => t.tipo === "receita")
-    .reduce((acc, t) => acc + t.valor, 0);
-  const gastosMes = transacoesMes
-    .filter((t) => t.tipo === "despesa")
-    .reduce((acc, t) => acc + t.valor, 0);
+  const transacoesMes = transacoes.filter((t) => t.data.startsWith(hoje.slice(0, 7)));
+  const ganhosMes = transacoesMes.filter((t) => t.tipo === "receita").reduce((acc, t) => acc + t.valor, 0);
+  const gastosMes = transacoesMes.filter((t) => t.tipo === "despesa").reduce((acc, t) => acc + t.valor, 0);
   const lucroMes = ganhosMes - gastosMes;
   const margemBruta = (lucroMes / (ganhosMes || 1)) * 100;
 
-  // Insight 1: Saúde Financeira (Regra 50/30/20 simplificada)
   if (margemBruta > 40) {
-    insights.push({
-      tipo: "sucesso",
-      titulo: "Alto Poder de Poupança",
-      mensagem: `Você manteve ${margemBruta.toFixed(1)}% das suas receitas este mês. Excelente capacidade de guardar para o futuro ou investir.`,
-      prioridade: 1,
-    });
+    insights.push({ tipo: "sucesso", titulo: "Alto Poder de Poupança", mensagem: `Você manteve ${margemBruta.toFixed(1)}% das suas receitas este mês.`, prioridade: 1 });
   } else if (margemBruta < 10 && ganhosMes > 1000) {
-    insights.push({
-      tipo: "alerta",
-      titulo: "Orçamento Estrangulado",
-      mensagem: `Sua margem de sobra caiu para ${margemBruta.toFixed(1)}%. Há pouco espaço para reservas de emergência. Evite novas dívidas.`,
-      prioridade: 1,
-    });
+    insights.push({ tipo: "alerta", titulo: "Orçamento Estrangulado", mensagem: `Sua margem de sobra caiu para ${margemBruta.toFixed(1)}%.`, prioridade: 1 });
   }
-
-  // Insight 2: Reserva de Emergência
-  const reservaIdeial = ganhosMes > 0 ? gastosMes * 3 : 5000;
-  const saldoAtual = transacoes.reduce(
-    (acc, t) => (t.tipo === "receita" ? acc + t.valor : acc - t.valor),
-    0,
-  );
-
-  if (saldoAtual < reservaIdeial * 0.1 && gastosMes > 0) {
-    insights.push({
-      tipo: "financeiro",
-      titulo: "Reserva de Emergência Menor",
-      mensagem: `Uma reserva ideal cobriria 3 meses de gastos (${formatador.format(reservaIdeial)}). Sugere-se alocar parte das próximas entradas para isso.`,
-      prioridade: 2,
-    });
-  }
-
-  // Insight 3: Dependência de Renda
-  const ganhosPorFonte = transacoesMes
-    .filter((t) => t.tipo === "receita")
-    .reduce(
-      (acc, t) => {
-        acc[t.categoria] = (acc[t.categoria] || 0) + t.valor;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-
-  Object.entries(ganhosPorFonte).forEach(([catId, valor]) => {
-    const pct = (valor / ganhosMes) * 100;
-    if (pct > 95 && ganhosMes > 2000) {
-      const nome =
-        categoriasReceita.find((c) => c.id === catId)?.nome || "Receita";
-      insights.push({
-        tipo: "dica",
-        titulo: "Única Fonte de Renda",
-        mensagem: `Aproximadamente ${pct.toFixed(0)}% da sua receita vem de ${nome}. Sempre que possível, diversifique para ter mais segurança.`,
-        prioridade: 3,
-      });
-    }
-  });
-
-  // Insight 4: Custos Essenciais vs Lazer
-  const gastosLazerCompras = transacoesMes
-    .filter((t) => ["lazer", "compras"].includes(t.categoria))
-    .reduce((acc, t) => acc + t.valor, 0);
-  if (gastosLazerCompras > gastosMes * 0.4 && gastosMes > 0) {
-    insights.push({
-      tipo: "info",
-      titulo: "Gastos Variáveis Elevados",
-      mensagem: `Lazer e Compras representam ${((gastosLazerCompras / gastosMes) * 100).toFixed(1)}% do mês. Cuide para que não afetem suas parcelas essenciais.`,
-      prioridade: 4,
-    });
-  }
-
-  // Aplicação da Configuração do Usuário
-  if (config.nivelDetalhe === "resumido") {
-    insights = insights
-      .slice(0, 3)
-      .map((i) => ({ ...i, mensagem: i.mensagem.split(".")[0] + "." }));
-  }
-
-  if (config.focarEmGanhos && !config.focarEmGastos) {
-    insights = insights.filter(
-      (i) => i.tipo === "sucesso" || i.tipo === "financeiro",
-    );
-  }
-
-  return insights.sort((a, b) => a.prioridade - b.prioridade);
+  return insights.length ? insights : [{ tipo: "info", titulo: "IA Padrão Carregada", mensagem: "A IA está carregando.", prioridade: 5 }];
 }

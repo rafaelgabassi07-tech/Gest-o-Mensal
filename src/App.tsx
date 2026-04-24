@@ -70,6 +70,10 @@ import {
   Gamepad2,
   GraduationCap,
   FileText,
+  Droplet,
+  Coffee,
+  Wrench,
+  Car,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -84,6 +88,7 @@ import {
   Cell,
   PieChart,
   Pie,
+  ReferenceLine,
 } from "recharts";
 
 import {
@@ -223,7 +228,7 @@ const getInitialData = (): Transacao[] => {
 const getSolidColor = (colorStr: string) => {
   if (!colorStr || typeof colorStr !== 'string') return '#3B82F6';
   if (colorStr.includes('Blue') || colorStr.includes('pie1') || colorStr.includes('colorRec')) return '#3B82F6';
-  if (colorStr.includes('Green') || colorStr.includes('pie2') || colorStr.includes('Atingido') && !colorStr.includes('NaoAtingido')) return '#10B981';
+  if (colorStr.includes('Green') || colorStr.includes('pie2') || colorStr.includes('Atingido') && !colorStr.includes('NaoAtingido') || colorStr.includes('colorLucro')) return '#10B981';
   if (colorStr.includes('Yellow') || colorStr.includes('pie3') || colorStr.includes('NaoAtingido')) return '#F59E0B';
   if (colorStr.includes('Purple') || colorStr.includes('pie4')) return '#8B5CF6';
   if (colorStr.includes('Red') || colorStr.includes('colorDesp')) return '#EF4444';
@@ -312,6 +317,8 @@ export default function App() {
   } | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDespesasModalOpen, setIsDespesasModalOpen] = useState(false);
+  const [isReceitasModalOpen, setIsReceitasModalOpen] = useState(false);
   const [metaDiaria, setMetaDiaria] = useState(() => {
     try {
       const saved = localStorage.getItem("@MeuCaixa:meta");
@@ -440,15 +447,22 @@ export default function App() {
 
   useEffect(() => {
     if (isAIOpen) {
-      const novosInsights = gerarInsightsNativos(
-        transacoes,
-        metaDiaria,
-        CATEGORIAS_RECEITA,
-        CATEGORIAS_DESPESA,
-        configAI,
-      );
-      setInsights(novosInsights);
-      if (novosInsights.some((i) => i.tipo === "alerta")) vibrar([50, 50, 50]);
+      const fetchInsights = async () => {
+        try {
+          const novosInsights = await gerarInsightsNativos(
+            transacoes,
+            metaDiaria,
+            CATEGORIAS_RECEITA,
+            CATEGORIAS_DESPESA,
+            configAI,
+          );
+          setInsights(novosInsights);
+          if (novosInsights.some((i) => i.tipo === "alerta")) vibrar([50, 50, 50]);
+        } catch (error) {
+          console.error("Erro ao gerar insights com IA:", error);
+        }
+      };
+      fetchInsights();
     }
   }, [isAIOpen, transacoes, metaDiaria, configAI]);
 
@@ -546,6 +560,7 @@ export default function App() {
     metaFulfillment,
     lucroMes,
     transacoesMes,
+    todasCategoriasGastos,
   } = useMemo(() => {
     const hojeStr = getLocalISODate();
     const hoje = new Date();
@@ -583,6 +598,7 @@ export default function App() {
           .replace(".", ""),
         receitas: 0,
         despesas: 0,
+        lucro: 0,
       });
     }
 
@@ -619,20 +635,26 @@ export default function App() {
 
       const diaGrafico = dias.find((d) => d.dataStr === t.data);
       if (diaGrafico) {
-        if (t.tipo === "receita") diaGrafico.receitas += valor;
-        else diaGrafico.despesas += valor;
+        if (t.tipo === "receita") {
+          diaGrafico.receitas += valor;
+          diaGrafico.lucro += valor;
+        } else {
+          diaGrafico.despesas += valor;
+          diaGrafico.lucro -= valor;
+        }
       }
     });
 
-    const topCat = Object.entries(catGastos)
+    const todasCategoriasGastos = Object.entries(catGastos)
       .map(([id, valor]) => ({
         id,
         valor,
         nome: CATEGORIAS_DESPESA.find((c) => c.id === id)?.nome || "Outros",
         pct: (valor / (rMes.despesas || 1)) * 100,
       }))
-      .sort((a, b) => b.valor - a.valor)
-      .slice(0, 3);
+      .sort((a, b) => b.valor - a.valor);
+
+    const topCat = todasCategoriasGastos.slice(0, 3);
 
     const rFonte = Object.entries(fonteReceitas)
       .map(([id, valor]) => ({
@@ -665,6 +687,7 @@ export default function App() {
       resumoMesPassado: rMesPassado,
       ganhoHoje: gHoje,
       topCategorias: topCat,
+      todasCategoriasGastos,
       receitaPorFonte: rFonte,
       mediaDiaria: media,
       projecaoMensal: projecao,
@@ -1116,12 +1139,18 @@ export default function App() {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.15 }}
-                    className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm"
+                    className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm cursor-pointer hover:shadow-md transition-shadow group"
+                    onClick={() => {
+                      vibrar(10);
+                      setIsDespesasModalOpen(true);
+                    }}
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-semibold text-gray-500  tracking-wider">
-                        Onde está gastando (Mês)
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xs font-semibold text-gray-500  tracking-wider group-hover:text-blue-500 transition-colors">
+                          Onde está gastando (Mês)
+                        </h3>
+                      </div>
                       <BarChart3 size={16} className="text-gray-400" />
                     </div>
 
@@ -1295,6 +1324,66 @@ export default function App() {
                     )}
                   </AnimatePresence>
 
+                  {/* Ações Rápidas */}
+                  <div>
+                     <h3 className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-3 px-1">Ações Rápidas</h3>
+                     <div className="grid grid-cols-4 gap-2">
+                        <button
+                          onClick={() => {
+                             vibrar(15);
+                             setTransacaoEmEdicao(null);
+                             setTabAtual("adicionar");
+                             // Ideally we would prefill "Combustível", but without changing add screen state we just route to it for now
+                          }}
+                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                        >
+                           <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 flex items-center justify-center mb-2">
+                             <Droplet size={16} />
+                           </div>
+                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Gasolina</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                             vibrar(15);
+                             setTransacaoEmEdicao(null);
+                             setTabAtual("adicionar");
+                          }}
+                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                        >
+                           <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 flex items-center justify-center mb-2">
+                             <Coffee size={16} />
+                           </div>
+                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Refeição</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                             vibrar(15);
+                             setTransacaoEmEdicao(null);
+                             setTabAtual("adicionar");
+                          }}
+                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                        >
+                           <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center mb-2">
+                             <Wrench size={16} />
+                           </div>
+                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Manutenção</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                             vibrar(15);
+                             setTransacaoEmEdicao(null);
+                             setTabAtual("adicionar");
+                          }}
+                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                        >
+                           <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center mb-2">
+                             <Car size={16} />
+                           </div>
+                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Corridas</span>
+                        </button>
+                     </div>
+                  </div>
+
                   {/* Balanços Rápidos */}
                   <div className="grid grid-cols-2 gap-2">
                     <motion.div
@@ -1419,6 +1508,24 @@ export default function App() {
                                   stopOpacity={0.05}
                                 />
                               </linearGradient>
+                              <linearGradient
+                                id="colorLucro"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                              >
+                                <stop
+                                  offset="0%"
+                                  stopColor="#10B981"
+                                  stopOpacity={0.6}
+                                />
+                                <stop
+                                  offset="100%"
+                                  stopColor="#10B981"
+                                  stopOpacity={0.05}
+                                />
+                              </linearGradient>
                             </defs>
                             <CartesianGrid
                               strokeDasharray="6 6"
@@ -1466,6 +1573,18 @@ export default function App() {
                               animationDuration={1200}
                               activeDot={{ r: 6, strokeWidth: 0, fill: '#DC2626' }}
                             />
+                            <Area
+                              type="monotone"
+                              dataKey="lucro"
+                              stroke="#10B981"
+                              strokeWidth={3}
+                              fillOpacity={1}
+                              fill="url(#colorLucro)"
+                              name="Lucro Líquido"
+                              isAnimationActive={true}
+                              animationDuration={1200}
+                              activeDot={{ r: 6, strokeWidth: 0, fill: '#10B981' }}
+                            />
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>
@@ -1475,13 +1594,19 @@ export default function App() {
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.22 }}
-                      className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm"
+                      className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm cursor-pointer hover:shadow-md transition-shadow group"
+                      onClick={() => {
+                        vibrar(10);
+                        setIsReceitasModalOpen(true);
+                      }}
                     >
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs font-semibold text-gray-500  tracking-wider">
-                          Por Fonte
-                        </h3>
-                        <ListIcon size={16} className="text-gray-400" />
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xs font-semibold text-gray-500  tracking-wider group-hover:text-green-500 transition-colors">
+                            Por Fonte
+                          </h3>
+                        </div>
+                        <ListIcon size={16} className="text-gray-400 group-hover:text-green-500 transition-colors" />
                       </div>
                       <div className="h-32 w-full outline-none focus:outline-none">
                         <ResponsiveContainer
@@ -1599,6 +1724,12 @@ export default function App() {
                               fill: isDarkMode ? "#1F2937" : "#F9FAFB",
                               radius: 12,
                             }}
+                          />
+                          <ReferenceLine
+                            y={metaDiaria}
+                            stroke={isDarkMode ? "#374151" : "#D1D5DB"}
+                            strokeDasharray="3 3"
+                            strokeWidth={2}
                           />
                           <Bar
                             dataKey="valor"
@@ -1861,6 +1992,124 @@ export default function App() {
         </nav>
 
         <AnimatePresence>
+          {isDespesasModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
+              onClick={() => setIsDespesasModalOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-5 sm:p-6 shadow-2xl relative border border-gray-100 dark:border-gray-800 max-h-[85vh] overflow-y-auto custom-scrollbar"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6 sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md pt-1 pb-3 z-10 border-b border-gray-100 dark:border-gray-800/60">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                       <BarChart3 size={20} className="text-blue-500" />
+                       Todas as Despesas
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1 font-medium">Neste mês</p>
+                  </div>
+                  <button
+                    onClick={() => setIsDespesasModalOpen(false)}
+                    className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-500 rounded-full transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {todasCategoriasGastos.length === 0 ? (
+                    <div className="text-center py-10 text-gray-400 text-sm font-medium">
+                      Nenhuma despesa registrada.
+                    </div>
+                  ) : (
+                    todasCategoriasGastos.map((cat, index) => (
+                      <div key={cat.id} className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl flex items-center justify-between group hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors">
+                         <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: ["#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EC4899", "#6366F1", "#14B8A6"][index % 8]}}>
+                             {cat.nome.substring(0,2).toUpperCase()}
+                           </div>
+                           <div>
+                             <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{cat.nome}</p>
+                             <p className="text-xs text-gray-400 font-medium">{cat.pct.toFixed(1)}% do total</p>
+                           </div>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-sm font-bold text-red-500">{formatarMoeda(cat.valor)}</p>
+                         </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {isReceitasModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
+              onClick={() => setIsReceitasModalOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-5 sm:p-6 shadow-2xl relative border border-gray-100 dark:border-gray-800 max-h-[85vh] overflow-y-auto custom-scrollbar"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6 sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md pt-1 pb-3 z-10 border-b border-gray-100 dark:border-gray-800/60">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                       <PieChartIcon size={20} className="text-green-500" />
+                       Fontes de Receita
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1 font-medium">Neste mês</p>
+                  </div>
+                  <button
+                    onClick={() => setIsReceitasModalOpen(false)}
+                    className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-500 rounded-full transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {receitaPorFonte.length === 0 ? (
+                    <div className="text-center py-10 text-gray-400 text-sm font-medium">
+                      Nenhuma receita registrada.
+                    </div>
+                  ) : (
+                    receitaPorFonte.map((fonte, index) => (
+                      <div key={fonte.id} className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl flex items-center justify-between group hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors">
+                         <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm" style={{ backgroundColor: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"][index % 5]}}>
+                             {fonte.nome.substring(0,2).toUpperCase()}
+                           </div>
+                           <div>
+                             <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{fonte.nome}</p>
+                             <p className="text-xs text-gray-400 font-medium">{fonte.pct.toFixed(1)}% do total</p>
+                           </div>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-sm font-bold text-green-500">{formatarMoeda(fonte.valor)}</p>
+                         </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
           {isMenuOpen && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -1909,6 +2158,30 @@ export default function App() {
                   >
                     <Upload size={18} className="text-green-500" /> Restaurar
                     Backup
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                        exportarCSV();
+                        setIsMenuOpen(false);
+                        mostrarToast("Planilha CSV exportada!");
+                    }}
+                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
+                  >
+                    <FileText size={18} className="text-purple-500" /> Exportar para CSV
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                        if (confirm("Você tem certeza que deseja deletar TODAS as transações? Isso não pode ser desfeito.")) {
+                            setTransacoes([]);
+                            setIsMenuOpen(false);
+                            mostrarToast("Todos os dados foram apagados.", "sucesso");
+                        }
+                    }}
+                    className="w-full flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/10 rounded-xl text-sm font-medium border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 mt-4"
+                  >
+                    <Trash2 size={18} /> Limpar Todos os Dados
                   </motion.button>
                   <input
                     type="file"
@@ -2124,16 +2397,22 @@ export default function App() {
                       </div>
 
                       <button
-                        onClick={() => {
-                          const novos = gerarInsightsNativos(
-                            transacoes,
-                            metaDiaria,
-                            CATEGORIAS_RECEITA,
-                            CATEGORIAS_DESPESA,
-                            configAI,
-                          );
-                          setInsights(novos);
-                          mostrarToast("Recalculando padrões diagnósticos...");
+                        onClick={async () => {
+                          mostrarToast("Recalculando padrões diagnósticos...", "info" as any);
+                          try {
+                            const novos = await gerarInsightsNativos(
+                              transacoes,
+                              metaDiaria,
+                              CATEGORIAS_RECEITA,
+                              CATEGORIAS_DESPESA,
+                              configAI,
+                            );
+                            setInsights(novos);
+                            mostrarToast("Padrões diagnósticos atualizados!");
+                          } catch (error) {
+                            console.error(error);
+                            mostrarToast("Erro ao processar.", "erro");
+                          }
                         }}
                         className="w-full py-3 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center gap-2 text-xs font-medium  tracking-normal text-blue-600 dark:text-blue-400 border-2 border-blue-100 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all shadow-lg shadow-blue-500/5 group"
                       >
