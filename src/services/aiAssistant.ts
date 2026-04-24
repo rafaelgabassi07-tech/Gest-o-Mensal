@@ -1,7 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transacao, Categoria, ConfiguracaoAI } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI {
+  if (!aiClient) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      console.warn("GEMINI_API_KEY não definida no ambiente. Chat pode não funcionar.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: key || 'placeholder-key' });
+  }
+  return aiClient;
+}
 
 export interface AIInsight {
   tipo: "alerta" | "sucesso" | "info" | "dica" | "financeiro";
@@ -79,7 +90,7 @@ ${userContext}
 Responda diretamente à pergunta do usuário orientando sobre as finanças dele, sem marcadores longos e apenas com o texto da resposta.`;
 
   try {
-    const chat = ai.chats.create({
+    const chat = getAI().chats.create({
       model: "gemini-3.1-pro-preview",
       config: {
         systemInstruction,
@@ -143,7 +154,7 @@ ${userContext}
 `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: "gemini-3.1-flash-preview",
       contents: prompt,
       config: {

@@ -703,10 +703,10 @@ export default function App() {
       const matchTipo = filtroTipo === "todos" || t.tipo === filtroTipo;
       const matchDesc =
         t.descricao.toLowerCase().includes(buscaDescricao.toLowerCase()) ||
-        (t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA)
+        ((t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA)
           .find((c) => c.id === t.categoria)
-          ?.nome.toLowerCase()
-          .includes(buscaDescricao.toLowerCase());
+          ?.nome?.toLowerCase()
+          ?.includes(buscaDescricao.toLowerCase()) ?? false);
       return matchTipo && matchDesc;
     });
 
