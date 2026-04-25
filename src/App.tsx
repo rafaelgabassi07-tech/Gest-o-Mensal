@@ -1284,7 +1284,7 @@ export default function App() {
                       vibrar(10);
                       setIsBalancoModalOpen(true);
                     }}
-                    className="bg-gradient-to-br from-primary-600 via-indigo-600 to-indigo-800 dark:from-primary-700 dark:via-indigo-800 dark:to-indigo-950 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl shadow-primary-500/30 border border-white/10 text-white transition-all hover:shadow-primary-500/40 relative overflow-hidden group cursor-pointer min-h-[280px] sm:min-h-[320px] flex items-center"
+                    className="bg-gradient-to-br from-primary-600 via-indigo-600 to-indigo-800 dark:from-primary-700 dark:via-indigo-800 dark:to-indigo-950 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl shadow-primary-500/30 border border-white/10 text-white transition-all hover:shadow-primary-500/40 relative overflow-hidden group cursor-pointer min-h-[240px] sm:min-h-[300px] flex items-center"
                   >
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/noise-pattern-with-subtle-cross-lines.png')] opacity-[0.05] mix-blend-overlay"></div>
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 whitespace-nowrap">
@@ -1295,9 +1295,9 @@ export default function App() {
                       />
                     </div>
                     <div className="relative z-10 w-full">
-                      <div className="flex justify-between items-start mb-10">
+                      <div className="flex justify-between items-start mb-6">
                         <div>
-                          <span className="text-white/60 text-[12px] font-black uppercase tracking-[0.3em] block mb-3">
+                          <span className="text-white/60 text-[11px] font-black uppercase tracking-[0.3em] block mb-2">
                             Balanço Geral
                           </span>
                           <span className={`text-4xl sm:text-7xl font-black tracking-tighter display-font leading-none ${lucroMes < 0 ? "text-red-300" : "text-white"}`}>
@@ -1381,31 +1381,31 @@ export default function App() {
                     transition={{ delay: 0.12 }}
                     className="bg-white dark:bg-gray-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-neutral-200/60 dark:border-white/10 relative overflow-hidden"
                   >
-                    <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-start justify-between mb-5">
                       <div className="flex items-center gap-3">
-                         <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center shadow-sm">
-                            <PieChartIcon size={24} />
+                         <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center shadow-sm">
+                            <PieChartIcon size={20} />
                          </div>
                          <div>
-                            <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Regra de Ouro</h3>
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider whitespace-nowrap">Distribuição 50 | 30 | 20</p>
+                            <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight leading-none">Regra de Ouro</h3>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider whitespace-nowrap mt-1">Distribuição 50 | 30 | 20</p>
                          </div>
                       </div>
-                      <div className="bg-gray-50 dark:bg-white/5 px-3 py-1.5 rounded-full text-[10px] font-bold text-gray-500 flex items-center gap-1">
-                        <Info size={12} /> Sugestão
+                      <div className="bg-gray-50 dark:bg-white/5 px-2 py-1 rounded-full text-[9px] font-bold text-gray-500 flex items-center gap-1">
+                        <Info size={10} /> Sugestão
                       </div>
                     </div>
                     
-                    <div className="space-y-6">
+                    <div className="space-y-5">
                        {/* Essencial */}
                        <div className="group">
-                          <div className="flex justify-between items-end mb-2">
+                          <div className="flex justify-between items-end mb-1.5">
                              <div className="flex flex-col">
-                                <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-0.5">Essencial</span>
-                                <span className="text-[10px] text-gray-400 font-medium italic">Necessidades básicas</span>
+                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Essencial</span>
+                                <span className="text-[9px] text-gray-400 font-medium italic">Necessidades básicas</span>
                              </div>
                              <div className="text-right shrink-0">
-                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
+                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-0.5">
                                   {formatarMoeda(gastoEssencial)} / <span className="text-gray-400">{formatarMoeda(resumoMes.receitas * 0.5)}</span>
                                 </div>
                                 <div className={`text-[10px] font-black ${(gastoEssencial > resumoMes.receitas * 0.5) ? 'text-red-500' : 'text-emerald-500'}`}>
@@ -1413,7 +1413,7 @@ export default function App() {
                                 </div>
                              </div>
                           </div>
-                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden shadow-inner flex p-0.5">
+                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner flex p-0.5">
                              <div 
                                className={`h-full rounded-full transition-all duration-1000 ${gastoEssencial > resumoMes.receitas * 0.5 ? 'bg-red-500' : 'bg-indigo-500'}`} 
                                style={{ width: `${resumoMes.receitas > 0 ? Math.min((gastoEssencial / resumoMes.receitas) * 100, 100) : 0}%` }}
@@ -1423,13 +1423,13 @@ export default function App() {
                        
                        {/* Livre */}
                        <div className="group">
-                          <div className="flex justify-between items-end mb-2">
+                          <div className="flex justify-between items-end mb-1.5">
                              <div className="flex flex-col">
-                                <span className="text-[11px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-0.5">Livre</span>
-                                <span className="text-[10px] text-gray-400 font-medium italic">Estilo de vida & desejos</span>
+                                <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">Livre</span>
+                                <span className="text-[9px] text-gray-400 font-medium italic">Estilo de vida & desejos</span>
                              </div>
                              <div className="text-right shrink-0">
-                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
+                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-0.5">
                                   {formatarMoeda(gastoLivre)} / <span className="text-gray-400">{formatarMoeda(resumoMes.receitas * 0.3)}</span>
                                 </div>
                                 <div className={`text-[10px] font-black ${(gastoLivre > resumoMes.receitas * 0.3) ? 'text-red-500' : 'text-emerald-500'}`}>
@@ -1437,7 +1437,7 @@ export default function App() {
                                 </div>
                              </div>
                           </div>
-                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden shadow-inner flex p-0.5">
+                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner flex p-0.5">
                              <div 
                                className={`h-full rounded-full transition-all duration-1000 ${gastoLivre > resumoMes.receitas * 0.3 ? 'bg-red-500' : 'bg-purple-500'}`} 
                                style={{ width: `${resumoMes.receitas > 0 ? Math.min((gastoLivre / resumoMes.receitas) * 100, 100) : 0}%` }}
@@ -1447,13 +1447,13 @@ export default function App() {
 
                        {/* Reserva */}
                        <div className="group">
-                          <div className="flex justify-between items-end mb-2">
+                          <div className="flex justify-between items-end mb-1.5">
                              <div className="flex flex-col">
-                                <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-0.5">Reserva</span>
-                                <span className="text-[10px] text-gray-400 font-medium italic">Futuro & segurança</span>
+                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Reserva</span>
+                                <span className="text-[9px] text-gray-400 font-medium italic">Futuro & segurança</span>
                              </div>
                              <div className="text-right shrink-0">
-                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
+                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-0.5">
                                   {formatarMoeda(Math.max(0, resumoMes.receitas - resumoMes.despesas))} / <span className="text-gray-400">{formatarMoeda(resumoMes.receitas * 0.2)}</span>
                                 </div>
                                 <div className={`text-[10px] font-black ${(resumoMes.receitas - resumoMes.despesas >= resumoMes.receitas * 0.2) ? 'text-emerald-500' : 'text-amber-500'}`}>
@@ -1461,7 +1461,7 @@ export default function App() {
                                 </div>
                              </div>
                           </div>
-                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden shadow-inner flex p-0.5">
+                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner flex p-0.5">
                              <div 
                                className="h-full rounded-full transition-all duration-1000 bg-emerald-500" 
                                style={{ width: `${resumoMes.receitas > 0 ? Math.min((Math.max(0, resumoMes.receitas - resumoMes.despesas) / resumoMes.receitas) * 100, 100) : 0}%` }}
@@ -1504,11 +1504,11 @@ export default function App() {
                           </p>
                         </div>
                       ) : (
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                           {topCategorias.map((cat, index) => (
                             <div key={`resumo-cat-${cat.id}-${index}`} className="group">
-                              <div className="flex justify-between items-end mb-2.5">
-                                <div className="flex items-center gap-2.5">
+                              <div className="flex justify-between items-end mb-1.5">
+                                <div className="flex items-center gap-2">
                                   <div
                                     className={`w-1.5 h-1.5 rounded-full ring-4 ring-offset-0 ${
                                       [
@@ -1520,25 +1520,25 @@ export default function App() {
                                       ][index % 5]
                                     }`}
                                   />
-                                  <span className="text-[11px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 group-hover:text-primary-500 transition-colors">
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 group-hover:text-primary-500 transition-colors">
                                     {cat.nome}
                                   </span>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-xs font-black text-gray-900 dark:text-white display-font mb-0.5">
+                                  <div className="text-[10px] font-black text-gray-900 dark:text-white display-font mb-0.5">
                                     {formatarMoeda(cat.valor)}
                                   </div>
-                                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                                  <div className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">
                                     {cat.pct.toFixed(0)}% do total
                                   </div>
                                 </div>
                               </div>
-                              <div className="relative w-full h-2 bg-gray-100 dark:bg-white/[0.03] rounded-full overflow-hidden shadow-inner">
+                              <div className="relative w-full h-1.5 bg-gray-100 dark:bg-white/[0.03] rounded-full overflow-hidden shadow-inner flex p-0.5">
                                 <motion.div
                                   initial={{ width: 0 }}
                                   animate={{ width: `${cat.pct}%` }}
                                   transition={{ duration: 1.2, ease: "circOut" }}
-                                  className={`absolute top-0 left-0 h-full rounded-full ${
+                                  className={`h-full rounded-full ${
                                     [
                                       "bg-gradient-to-r from-blue-600 to-blue-400",
                                       "bg-gradient-to-r from-rose-600 to-rose-400",
@@ -2241,33 +2241,33 @@ export default function App() {
           >
             <div className="space-y-0 divide-y divide-gray-100 dark:divide-gray-800/50">
               {/* Resumo de Destaque Central */}
-              <div className="py-10 flex flex-col items-center text-center">
-                <span className="text-[11px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.25em] mb-3">Saldo Disponível no Mês</span>
-                <span className={`text-6xl font-light tracking-tighter display-font mb-8 transition-colors ${lucroMes < 0 ? "text-red-500" : "text-gray-900 dark:text-white"}`}>
+              <div className="py-6 flex flex-col items-center text-center">
+                <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.25em] mb-2">Saldo Disponível no Mês</span>
+                <span className={`text-4xl font-black tracking-tighter display-font mb-6 transition-colors ${lucroMes < 0 ? "text-red-500" : "text-gray-900 dark:text-white"}`}>
                   {formatarMoeda(lucroMes)}
                 </span>
                 
-                <div className="w-full grid grid-cols-2 gap-12 px-6">
+                <div className="w-full grid grid-cols-2 gap-6 px-6">
                    <div className="text-center group">
-                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.15em] block mb-2 group-hover:text-emerald-500 transition-colors">Entradas Totais</span>
+                     <span className="text-[9px] text-gray-400 font-bold uppercase tracking-[0.15em] block mb-1 group-hover:text-emerald-500 transition-colors">Entradas Totais</span>
                      <div className="flex flex-col items-center">
-                       <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-500 display-font">{formatarMoeda(resumoMes.receitas)}</span>
+                       <span className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-500 display-font">{formatarMoeda(resumoMes.receitas)}</span>
                        {resumoMesPassado.receitas > 0 && (
-                         <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold ${(resumoMes.receitas / resumoMesPassado.receitas) >= 1 ? 'text-emerald-500' : 'text-red-400'}`}>
-                           {(resumoMes.receitas / resumoMesPassado.receitas) >= 1 ? <ArrowUpRight size={10} strokeWidth={3} /> : <ArrowDownRight size={10} strokeWidth={3} />}
-                           {Math.abs((resumoMes.receitas / resumoMesPassado.receitas - 1) * 100).toFixed(0)}% vs anterior
+                         <div className={`mt-1 flex items-center gap-1 text-[9px] font-bold ${(resumoMes.receitas / resumoMesPassado.receitas) >= 1 ? 'text-emerald-500' : 'text-red-400'}`}>
+                           {(resumoMes.receitas / resumoMesPassado.receitas) >= 1 ? <ArrowUpRight size={9} strokeWidth={3} /> : <ArrowDownRight size={9} strokeWidth={3} />}
+                           {Math.abs((resumoMes.receitas / resumoMesPassado.receitas - 1) * 100).toFixed(0)}% vs ant.
                          </div>
                        )}
                      </div>
                    </div>
                    <div className="text-center group">
-                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.15em] block mb-2 group-hover:text-red-500 transition-colors">Saídas Totais</span>
+                     <span className="text-[9px] text-gray-400 font-bold uppercase tracking-[0.15em] block mb-1 group-hover:text-red-500 transition-colors">Saídas Totais</span>
                      <div className="flex flex-col items-center">
-                       <span className="text-lg sm:text-xl font-bold text-red-500 dark:text-red-400 display-font">{formatarMoeda(resumoMes.despesas)}</span>
+                       <span className="text-base sm:text-lg font-bold text-red-500 dark:text-red-400 display-font">{formatarMoeda(resumoMes.despesas)}</span>
                        {resumoMesPassado.despesas > 0 && (
-                         <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold ${(resumoMes.despesas / resumoMesPassado.despesas) <= 1 ? 'text-emerald-500' : 'text-red-400'}`}>
-                           {(resumoMes.despesas / resumoMesPassado.despesas) <= 1 ? <ArrowDownRight size={10} strokeWidth={3} /> : <ArrowUpRight size={10} strokeWidth={3} />}
-                           {Math.abs((resumoMes.despesas / resumoMesPassado.despesas - 1) * 100).toFixed(0)}% vs anterior
+                         <div className={`mt-1 flex items-center gap-1 text-[9px] font-bold ${(resumoMes.despesas / resumoMesPassado.despesas) <= 1 ? 'text-emerald-500' : 'text-red-400'}`}>
+                           {(resumoMes.despesas / resumoMesPassado.despesas) <= 1 ? <ArrowDownRight size={9} strokeWidth={3} /> : <ArrowUpRight size={9} strokeWidth={3} />}
+                           {Math.abs((resumoMes.despesas / resumoMesPassado.despesas - 1) * 100).toFixed(0)}% vs ant.
                          </div>
                        )}
                      </div>
@@ -2278,99 +2278,99 @@ export default function App() {
               {/* Lista de Métricas Estruturadas */}
               <div className="divide-y divide-gray-50 dark:divide-gray-800/20">
                 {/* Projeção */}
-                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                      <TrendingUp size={22} strokeWidth={2.5} />
+                <div className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center transition-all group-hover:scale-110 shadow-sm">
+                      <TrendingUp size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Projeção Mensal</span>
-                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Estimativa baseada no ritmo hoje</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white block tracking-tight">Projeção Mensal</span>
+                      <span className="text-[10px] text-gray-400 font-medium tracking-wide">Estimativa baseada no ritmo hoje</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-primary-600 dark:text-primary-400 display-font block leading-none">{formatarMoeda(projecaoMensal)}</span>
+                    <span className="text-lg font-bold text-primary-600 dark:text-primary-400 display-font block leading-none">{formatarMoeda(projecaoMensal)}</span>
                   </div>
                 </div>
 
                 {/* Ritmo Diário */}
-                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                      <Target size={22} strokeWidth={2.5} />
+                <div className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center transition-all group-hover:scale-110 shadow-sm">
+                      <Target size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Ritmo Diário</span>
-                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Faturamento médio / dia</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white block tracking-tight">Ritmo Diário</span>
+                      <span className="text-[10px] text-gray-400 font-medium tracking-wide">Faturamento médio / dia</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-orange-600 dark:text-orange-400 display-font block leading-none">{formatarMoeda(mediaDiaria)}</span>
+                    <span className="text-lg font-bold text-orange-600 dark:text-orange-400 display-font block leading-none">{formatarMoeda(mediaDiaria)}</span>
                   </div>
                 </div>
 
                 {/* Ticket Médio */}
-                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                      <Zap size={22} strokeWidth={2.5} />
+                <div className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all group-hover:scale-110 shadow-sm">
+                      <Zap size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Ticket Médio</span>
-                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Valor médio por entrada</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white block tracking-tight">Ticket Médio</span>
+                      <span className="text-[10px] text-gray-400 font-medium tracking-wide">Valor médio por entrada</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 display-font block leading-none">{formatarMoeda(ticketMedio)}</span>
+                    <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 display-font block leading-none">{formatarMoeda(ticketMedio)}</span>
                   </div>
                 </div>
 
                 {/* Eficiência */}
-                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                      <Activity size={22} strokeWidth={2.5} />
+                <div className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-all group-hover:scale-110 shadow-sm">
+                      <Activity size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Eficiência ROC</span>
-                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Retorno vs Despesa</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white block tracking-tight">Eficiência ROC</span>
+                      <span className="text-[10px] text-gray-400 font-medium tracking-wide">Retorno vs Despesa</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400 display-font block leading-none">{(indiceEficiencia || 0).toFixed(2)}x</span>
+                    <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400 display-font block leading-none">{(indiceEficiencia || 0).toFixed(2)}x</span>
                   </div>
                 </div>
 
                 {/* Custos Fixos */}
-                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                      <Lock size={22} strokeWidth={2.5} />
+                <div className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center transition-all group-hover:scale-110 shadow-sm">
+                      <Lock size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Custos Fixos</span>
-                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Comprometimento recorrente</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white block tracking-tight">Custos Fixos</span>
+                      <span className="text-[10px] text-gray-400 font-medium tracking-wide">Comprometimento recorrente</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-red-600 dark:text-red-400 display-font block leading-none">{formatarMoeda(totalCustosFixos)}</span>
+                    <span className="text-lg font-bold text-red-600 dark:text-red-400 display-font block leading-none">{formatarMoeda(totalCustosFixos)}</span>
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{(totalCustosFixos / (resumoMes.despesas || 1) * 100).toFixed(0)}% do operacional</span>
                   </div>
                 </div>
 
                 {/* Consistência */}
-                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                      <CalendarIcon size={22} strokeWidth={2.5} />
+                <div className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 flex items-center justify-center transition-all group-hover:scale-110 shadow-sm">
+                      <CalendarIcon size={20} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Consistência Semanal</span>
-                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Score de fôlego (7 dias)</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white block tracking-tight">Consistência Semanal</span>
+                      <span className="text-[10px] text-gray-400 font-medium tracking-wide">Score de fôlego (7 dias)</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-pink-600 dark:text-pink-400 display-font block leading-none">{diasLucrativos} / 7</span>
+                    <span className="text-lg font-bold text-pink-600 dark:text-pink-400 display-font block leading-none">{diasLucrativos} / 7</span>
                     <div className="flex gap-1 mt-1.5 justify-end">
                        {[...Array(7)].map((_, i) => (
                          <div key={`dot-${i}`} className={`w-1.5 h-1.5 rounded-full ${i < diasLucrativos ? 'bg-pink-500' : 'bg-gray-200 dark:bg-gray-800'}`} />
