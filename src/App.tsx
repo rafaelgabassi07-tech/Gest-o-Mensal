@@ -822,7 +822,9 @@ export default function App() {
     localStorage.setItem("@MeuCaixa:custosFixos", JSON.stringify(custosFixosBase));
   }, [custosFixosBase]);
 
-  const [abaConfig, setAbaConfig] = useState<"Custos" | "Interface" | "Dados" | "IA" | "Perfil">("Custos");
+  const [abaConfig, setAbaConfig] = useState<"Custos" | "Interface" | "Dados" | "Perfil">("Custos");
+  const [isAddingCF, setIsAddingCF] = useState(false);
+  const [novoCF, setNovoCF] = useState({ descricao: "", valor: "", diaVencimento: "5", categoria: "moradia" });
 
   // --- Funções de Feedback ---
   const vibrar = (ms: number | number[] = 10) => {
@@ -2402,8 +2404,9 @@ export default function App() {
                                 </div>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <p className="text-[13px] font-semibold truncate text-gray-900 dark:text-gray-100">
+                                    <p className="text-[13px] font-semibold truncate text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                       {t.descricao || "Geral"}
+                                      <span className="text-[10px] text-gray-400 font-medium tracking-normal bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-gray-700">{formatarDataBR(t.data).substring(0, 5)}</span>
                                     </p>
                                     {t.custoFixo && (
                                       <span className="bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
@@ -2418,8 +2421,6 @@ export default function App() {
                                   </div>
                                   <p className="text-xs text-gray-500 tracking-widest mt-0.5 flex gap-1.5 items-center">
                                     <span>{getNomeCategoria(t)}</span>
-                                    <span className="w-1 h-1 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
-                                    <span>{formatarDataBR(t.data)}</span>
                                   </p>
                                 </div>
                               </div>
@@ -2778,7 +2779,6 @@ export default function App() {
                   { id: "Custos", icon: Lock, desc: "Recorrentes" },
                   { id: "Interface", icon: LayoutDashboard, desc: "Aparência" },
                   { id: "Dados", icon: BoxIcon, desc: "Backup" },
-                  { id: "IA", icon: Sparkles, desc: "Config. IA" },
                   { id: "Perfil", icon: User, desc: "Sua Conta" },
                 ].map((aba) => {
                   const Icon = aba.icon;
@@ -2839,9 +2839,8 @@ export default function App() {
                                 <span className="text-sm font-black text-red-500">{formatarMoeda(cf.valor)}</span>
                                 <button 
                                   onClick={() => {
-                                    if(confirm("Remover este custo fixo?")) {
                                       setCustosFixosBase(prev => prev.filter(x => x.id !== cf.id));
-                                    }
+                                      mostrarToast("Custo removido", "erro");
                                   }}
                                   className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                 >
@@ -2853,20 +2852,55 @@ export default function App() {
                        )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2">
+                    {isAddingCF ? (
+                      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 rounded-xl space-y-3 mt-4">
+                         <input 
+                            placeholder="Nome do Custo (ex: Aluguel)"
+                            className="w-full bg-white dark:bg-gray-950 px-3 py-2 rounded-lg text-sm border border-gray-100 dark:border-gray-800 outline-none text-gray-900 dark:text-white"
+                            value={novoCF.descricao}
+                            onChange={e => setNovoCF({...novoCF, descricao: e.target.value})}
+                         />
+                         <div className="flex gap-2">
+                           <input 
+                              placeholder="Valor Mensal"
+                              type="number"
+                              className="w-full bg-white dark:bg-gray-950 px-3 py-2 rounded-lg text-sm border border-gray-100 dark:border-gray-800 outline-none text-gray-900 dark:text-white"
+                              value={novoCF.valor}
+                              onChange={e => setNovoCF({...novoCF, valor: e.target.value})}
+                           />
+                           <input 
+                              placeholder="Dia (1-31)"
+                              type="number"
+                              className="w-24 shrink-0 bg-white dark:bg-gray-950 px-3 py-2 rounded-lg text-sm border border-gray-100 dark:border-gray-800 outline-none text-gray-900 dark:text-white text-center"
+                              value={novoCF.diaVencimento}
+                              min={1} max={31}
+                              onChange={e => setNovoCF({...novoCF, diaVencimento: e.target.value})}
+                           />
+                         </div>
+                         <div className="flex gap-2 pt-1">
+                            <button 
+                              onClick={() => setIsAddingCF(false)}
+                              className="flex-1 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-[11px] py-2.5 rounded-lg uppercase tracking-wider transition-colors hover:bg-gray-300 dark:hover:bg-gray-700"
+                            >Cancelar</button>
+                            <button 
+                              onClick={() => {
+                                const valor = parseFloat(novoCF.valor.replace(',', '.'));
+                                if(!novoCF.descricao || isNaN(valor)) return mostrarToast("Preencha corretamente", "erro");
+                                const dia = parseInt(novoCF.diaVencimento) || 5;
+                                setCustosFixosBase(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), descricao: novoCF.descricao, valor, categoria: "moradia", diaVencimento: dia }]);
+                                setIsAddingCF(false);
+                                setNovoCF({ descricao: "", valor: "", diaVencimento: "5", categoria: "moradia" });
+                              }}
+                              className="flex-1 bg-primary-500 text-white font-bold text-[11px] py-2.5 rounded-lg uppercase tracking-wider transition-colors hover:bg-primary-600 shadow-sm shadow-primary-500/20"
+                            >Salvar Custo</button>
+                         </div>
+                      </div>
+                    ) : (
+                     <div className="grid grid-cols-2 gap-2 pt-2">
                        <button 
-                         onClick={() => {
-                           const desc = prompt("Nome do Custo (ex: Aluguel):");
-                           if(!desc) return;
-                           const valorStr = prompt("Valor mensal (somente números e vírgula, ex: 1500,00):");
-                           if(!valorStr) return;
-                           const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
-                           if(isNaN(valor)) return alert("Valor inválido.");
-                           const diaStr = prompt("Dia do vencimento (1 a 31):");
-                           const dia = diaStr ? parseInt(diaStr) : 5;
-                           setCustosFixosBase(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), descricao: desc, valor, categoria: "moradia", diaVencimento: isNaN(dia) ? 5 : dia }]);
-                         }}
+                         onClick={() => setIsAddingCF(true)}
                          className="flex items-center justify-center gap-1 p-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-[11px] uppercase tracking-widest rounded-xl hover:opacity-90 transition-all"
+                       
                        >
                          <Plus size={14} />
                          Novo Custo
@@ -2874,7 +2908,7 @@ export default function App() {
 
                        <button 
                          onClick={() => {
-                           if(custosFixosBase.length === 0) return alert("Nenhum custo cadastrado.");
+                           if(custosFixosBase.length === 0) return mostrarToast("Nenhum custo cadastrado.", "erro");
                            const hoje = new Date();
                            const prefix = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-`;
                            const novos = custosFixosBase.map(cf => ({
@@ -2897,6 +2931,7 @@ export default function App() {
                          Lançar no Mês
                        </button>
                     </div>
+                   )}
                   </motion.div>
                 )}
 
@@ -3184,13 +3219,13 @@ function FormularioLancamento({
       <div className="flex p-1 rounded-xl mb-2 shrink-0 bg-transparent flex-row justify-center space-x-4">
         <button
           onClick={() => { setTipo("receita"); vibrar(10); }}
-          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "receita" ? "border-green-500 text-green-600" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
+          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "receita" ? "border-green-500 text-green-600" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
         >
           Entrada
         </button>
         <button
           onClick={() => { setTipo("despesa"); vibrar(10); }}
-          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "despesa" ? "border-red-500 text-red-500" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
+          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "despesa" ? "border-red-500 text-red-500" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
         >
           Saída
         </button>
@@ -3207,7 +3242,7 @@ function FormularioLancamento({
             value={valor}
             onChange={(e) => setValor(formatCurrencyEntry(e.target.value))}
             placeholder="0,00"
-            className={`text-3xl font-black bg-transparent outline-none text-center transition-all tracking-tighter display-font placeholder:opacity-30 ${tipo === "receita" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} max-w-[140px]`}
+            className={`text-2xl font-black bg-transparent outline-none text-center transition-all tracking-tighter display-font placeholder:opacity-30 ${tipo === "receita" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} max-w-[120px]`}
           />
         </div>
 
