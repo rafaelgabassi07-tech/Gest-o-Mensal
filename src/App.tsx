@@ -960,7 +960,6 @@ export default function App() {
   }, [corTema]);
 
   useEffect(() => {
-    localStorage.setItem("@MeuCaixa:corTema", corTema);
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
       document.documentElement.style.setProperty("color-scheme", "dark");
@@ -2865,7 +2864,7 @@ export default function App() {
                            if(isNaN(valor)) return alert("Valor inválido.");
                            const diaStr = prompt("Dia do vencimento (1 a 31):");
                            const dia = diaStr ? parseInt(diaStr) : 5;
-                           setCustosFixosBase([...custosFixosBase, { id: Math.random().toString(36).substr(2, 9), descricao: desc, valor, categoria: "moradia", diaVencimento: isNaN(dia) ? 5 : dia }]);
+                           setCustosFixosBase(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), descricao: desc, valor, categoria: "moradia", diaVencimento: isNaN(dia) ? 5 : dia }]);
                          }}
                          className="flex items-center justify-center gap-1 p-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-[11px] uppercase tracking-widest rounded-xl hover:opacity-90 transition-all"
                        >
@@ -2888,7 +2887,7 @@ export default function App() {
                               custoFixo: true,
                               tags: []
                            }));
-                           setTransacoes([...novos, ...transacoes]);
+                           setTransacoes(prev => [...novos, ...prev]);
                            mostrarToast("Custos lançados!");
                          }}
                          className="flex items-center justify-center gap-1 p-3 bg-primary-500 text-white font-bold text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50"
