@@ -73,6 +73,8 @@ import {
   Table as TableIcon,
   PlusCircle as PlusCircleIcon,
   Cloud as CloudIcon,
+  Menu,
+  User,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -181,7 +183,7 @@ const CATEGORIAS_LEGADO: Record<string, any> = {
 
 const PROFISSOES_CONFIG: Record<string, { titulo: string; icone: any; receitas: Categoria[]; despesas: Categoria[] }> = {
   "Motorista": {
-    titulo: "Motorista de Aplicativo",
+    titulo: "Motorista de App",
     icone: Car,
     receitas: [
       { id: "uber", nome: "Uber", icone: Car },
@@ -205,22 +207,24 @@ const PROFISSOES_CONFIG: Record<string, { titulo: string; icone: any; receitas: 
     ]
   },
   "Hibrido": {
-    titulo: "Motorista + Entregador",
+    titulo: "Entregas + Passageiro",
     icone: RefreshCcw,
     receitas: [
-      { id: "uber", nome: "Uber/99", icone: Car },
-      { id: "ifood", nome: "iFood/Rappi", icone: ShoppingBag },
+      { id: "uber", nome: "Uber", icone: Car },
+      { id: "99", nome: "99", icone: Car },
+      { id: "shopee", nome: "Shopee", icone: Package },
+      { id: "loggi", nome: "Loggi", icone: Package },
+      { id: "mercado_livre", nome: "Mercado Livre", icone: Package },
       { id: "particular", nome: "Particular", icone: Smartphone },
-      { id: "entrega_direta", nome: "Entrega Direta", icone: Package },
       { id: "gorjeta", nome: "Gorjetas", icone: Smile },
-      { id: "bonus_plataforma", nome: "Bônus", icone: Sparkles },
+      { id: "bonus", nome: "Bônus", icone: Sparkles },
       { id: "outros", nome: "Outros", icone: MoreHorizontal },
     ],
     despesas: [
       { id: "combustivel", nome: "Combustível", icone: Fuel },
       { id: "manutencao", nome: "Manutenção", icone: Wrench },
       { id: "internet", nome: "Plano Internet", icone: Smartphone },
-      { id: "aluguel", nome: "Aluguel (Carro/Moto)", icone: Key },
+      { id: "aluguel", nome: "Aluguel Veículo", icone: Key },
       { id: "limpeza", nome: "Limpeza/Bag", icone: Droplets },
       { id: "estacionamento", nome: "Pedágio/Estacionamento", icone: MapPin },
       { id: "alimentacao", nome: "Alimentação", icone: Coffee },
@@ -231,18 +235,20 @@ const PROFISSOES_CONFIG: Record<string, { titulo: string; icone: any; receitas: 
     titulo: "Entregador",
     icone: Package,
     receitas: [
-      { id: "ifood", nome: "iFood", icone: ShoppingBag },
-      { id: "rappi", nome: "Rappi", icone: ShoppingBag },
+      { id: "shopee", nome: "Shopee", icone: Package },
       { id: "loggi", nome: "Loggi", icone: Package },
+      { id: "mercado_livre", nome: "Mercado Livre", icone: Package },
+      { id: "ifood", nome: "iFood", icone: ShoppingBag },
       { id: "particular", nome: "Particular", icone: Smartphone },
+      { id: "entrega_direta", nome: "Entrega Direta", icone: Package },
       { id: "gorjeta", nome: "Gorjetas", icone: Smile },
-      { id: "bonus_plataforma", nome: "Bônus/Promo", icone: Sparkles },
+      { id: "bonus", nome: "Bônus/Promo", icone: Sparkles },
       { id: "outros", nome: "Outros", icone: MoreHorizontal },
     ],
     despesas: [
       { id: "combustivel", nome: "Combustível", icone: Fuel },
       { id: "manutencao", nome: "Manutenção", icone: Wrench },
-      { id: "equipamento", nome: "Equipamento/Bag/Vestuário", icone: Package },
+      { id: "equipamento", nome: "Equipamento/Bag", icone: Package },
       { id: "smartphone", nome: "Smartphone/Plano", icone: Smartphone },
       { id: "alimentacao", nome: "Alimentação", icone: Coffee },
       { id: "estacionamento", nome: "Estacionamento", icone: MapPin },
@@ -261,9 +267,33 @@ const PROFISSOES_CONFIG: Record<string, { titulo: string; icone: any; receitas: 
     despesas: [
       { id: "materiais", nome: "Materiais", icone: BoxIcon },
       { id: "marketing", nome: "Marketing", icone: Target },
-      { id: "ferramentas", nome: "Ferramentas/Assinaturas", icone: Code },
+      { id: "ferramentas", nome: "Ferramentas", icone: Code },
       { id: "espaco", nome: "Espaço/Coworking", icone: Home },
       { id: "alimentacao", nome: "Alimentação", icone: Coffee },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ]
+  },
+  "CLT": {
+    titulo: "Empregado CLT",
+    icone: FileText,
+    receitas: [
+      { id: "salario", nome: "Salário Fixo", icone: Briefcase },
+      { id: "adiantamento", nome: "Adiantamento", icone: Activity },
+      { id: "ferias", nome: "Férias/13º", icone: Sparkles },
+      { id: "vr_va", nome: "Vale Refeição", icone: Coffee },
+      { id: "hora_extra", nome: "Hora Extra", icone: TrendingUp },
+      { id: "plr", nome: "PLR/Bônus", icone: Target },
+      { id: "extra", nome: "Renda Extra", icone: Smartphone },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ],
+    despesas: [
+      { id: "moradia", nome: "Moradia", icone: Home },
+      { id: "contas", nome: "Contas Básicas", icone: FileText },
+      { id: "mercado", nome: "Mercado/Feira", icone: ShoppingBag },
+      { id: "transporte", nome: "Transporte/App", icone: Car },
+      { id: "saude", nome: "Saúde/Farmácia", icone: HeartPulse },
+      { id: "lazer", nome: "Lazer", icone: Smile },
+      { id: "educacao", nome: "Educação", icone: Code },
       { id: "outros", nome: "Outros", icone: MoreHorizontal },
     ]
   },
@@ -419,55 +449,64 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
   const [meta, setMeta] = useState("4000");
 
   return (
-    <div className="fixed inset-0 z-[200] bg-white dark:bg-gray-950 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto overflow-x-hidden">
+    <div className="fixed inset-0 z-[200] bg-white dark:bg-gray-950 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto overflow-x-hidden selection:bg-primary-500/30">
       <div className="w-full max-w-md mx-auto py-8">
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div 
               key="intro"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="text-center space-y-6 sm:space-y-10"
+              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="text-center space-y-8 sm:space-y-12"
             >
               <div className="relative inline-block">
-                <div className="absolute inset-0 bg-primary-500 blur-3xl opacity-20 rounded-full animate-pulse" />
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-primary-400 to-primary-600 text-white shadow-2xl flex items-center justify-center mx-auto">
-                  <Sparkles size={40} className="sm:size-12" />
+                <div className="absolute inset-0 bg-primary-500 blur-3xl opacity-30 rounded-full animate-pulse" />
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] bg-gradient-to-br from-primary-400 to-primary-600 text-white shadow-2xl flex items-center justify-center mx-auto ring-4 ring-white/10 dark:ring-gray-900/50">
+                  <Sparkles size={48} className="drop-shadow-md" />
                 </div>
               </div>
               
-              <div className="space-y-3 sm:space-y-4">
-                <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white leading-[0.95]">
+              <div className="space-y-4">
+                <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white leading-[1.1]">
                   Bem-vindo ao <br/>
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-indigo-600">AutoCaixa Pro</span>
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-medium max-w-[280px] sm:max-w-md mx-auto">
-                  A gestão financeira inteligente pensada para a sua rotina.
+                <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-medium max-w-[280px] sm:max-w-md mx-auto leading-relaxed">
+                  O controle financeiro projetado para quem faz o seu próprio salário e para quem quer multiplicar seus ganhos.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3 text-left">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-left">
                 {[
-                  { icon: Zap, title: "Inteligência", desc: "Insights nativos automáticos." },
-                  { icon: ShieldCheck, title: "Segurança", desc: "Dados locais no seu aparelho." },
-                  { icon: Target, title: "Foco", desc: "Metas conforme sua realidade." }
+                  { icon: Target, title: "Foco a Laser", desc: "Suas metas viram realidade diaria." },
+                  { icon: ShieldCheck, title: "100% Privado", desc: "Seus dados nunca saem do seu celular." },
+                  { icon: TrendingUp, title: "Lucro Real", desc: "Acompanhe o que sobra de verdade no bolso." }
                 ].map((feature, i) => (
-                  <div key={i} className="flex sm:flex-col items-center sm:items-start gap-4 sm:gap-2 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
-                    <feature.icon size={18} className="text-primary-500 shrink-0" />
-                    <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white">{feature.title}</h3>
-                      <p className="text-[9px] text-gray-500 leading-tight font-medium hidden sm:block">{feature.desc}</p>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + (i * 0.1) }}
+                    key={i} 
+                    className="flex sm:flex-col items-center sm:items-start gap-4 sm:gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 hover:border-primary-500/30 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center shrink-0">
+                      <feature.icon size={20} className="text-primary-500" />
                     </div>
-                  </div>
+                    <div>
+                      <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-white">{feature.title}</h3>
+                      <p className="text-[10px] text-gray-500 mt-1 leading-relaxed font-medium hidden sm:block">{feature.desc}</p>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
 
               <button 
-                onClick={() => setStep(1)}
-                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-gray-900/20 active:scale-95 transition-all"
+                onClick={() => { vibrar(15); setStep(1); }}
+                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-gray-900/20 dark:shadow-white/10 active:scale-[0.98] transition-all hover:bg-gray-800 dark:hover:bg-gray-100"
               >
-                Começar Setup
+                Configurar Meu Caixa
               </button>
             </motion.div>
           )}
@@ -475,38 +514,42 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
           {step === 1 && (
             <motion.div 
               key="step1"
-              initial={{ opacity: 0, x: 10 }} 
+              initial={{ opacity: 0, x: 20 }} 
               animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: -10 }}
-              className="space-y-8 text-center"
+              exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="space-y-10 text-center"
             >
-              <div className="space-y-2">
-                <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.4em]">Identidade</span>
-                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">Qual seu nome?</h2>
+              <div className="space-y-3">
+                <span className="inline-block px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em]">Identidade</span>
+                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Como devo te chamar?</h2>
               </div>
               
-              <div className="relative group py-4">
+              <div className="relative group py-6 max-w-sm mx-auto">
                 <input 
                   type="text" 
                   value={nome}
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && nome.length >= 1) {
+                    if (e.key === "Enter" && nome.trim().length >= 1) {
                       vibrar(10);
                       setStep(2);
                     }
                   }}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Seu nome"
-                  className="w-full bg-transparent text-center text-3xl sm:text-4xl font-black text-gray-900 dark:text-white outline-none placeholder:text-gray-100 dark:placeholder:text-gray-800"
+                  placeholder="Seu primeiro nome"
+                  className="w-full bg-transparent text-center text-4xl sm:text-5xl font-black text-gray-900 dark:text-white outline-none placeholder:text-gray-200 dark:placeholder:text-gray-800 transition-all placeholder:font-bold"
                 />
-                <div className="h-1 w-20 mx-auto bg-primary-500 rounded-full mt-2" />
+                <motion.div 
+                  className="h-1.5 mx-auto bg-primary-500 rounded-full mt-4" 
+                  animate={{ width: nome.length > 0 ? "100%" : "3rem", opacity: nome.length > 0 ? 1 : 0.3 }}
+                />
               </div>
 
               <button 
-                disabled={!nome || nome.length < 1}
+                disabled={!nome.trim() || nome.trim().length < 1}
                 onClick={() => { vibrar(10); setStep(2); }}
-                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl disabled:opacity-30 transition-all"
+                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl disabled:opacity-20 disabled:scale-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 Avançar
               </button>
@@ -516,38 +559,42 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
           {step === 2 && (
             <motion.div 
               key="step2"
-              initial={{ opacity: 0, x: 10 }} 
+              initial={{ opacity: 0, x: 20 }} 
               animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: -10 }}
-              className="space-y-6 text-center"
+              exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="space-y-8 text-center"
             >
-              <div className="space-y-2">
-                <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.4em]">Especialidade</span>
-                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">Sua profissão?</h2>
+              <div className="space-y-3">
+                <span className="inline-block px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em]">Perfil de Ganhos</span>
+                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Qual sua área de atuação?</h2>
+                <p className="text-xs text-gray-500 font-medium max-w-xs mx-auto">Isso nos ajudará a personalizar as categorias de receitas e despesas.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {Object.entries(PROFISSOES_CONFIG).map(([key, cfg]) => (
                   <button
                     key={key}
                     onClick={() => { vibrar(15); setProfissao(key); }}
-                    className={`group relative p-4 sm:p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-2 text-center overflow-hidden ${
+                    className={`group relative p-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-3 text-center overflow-hidden h-28 ${
                       profissao === key 
-                        ? "bg-primary-500 border-primary-500 text-white shadow-lg" 
-                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
+                        ? "bg-primary-500 border-primary-500 text-white shadow-xl shadow-primary-500/20 scale-100" 
+                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:scale-[1.02]"
                     }`}
                   >
-                    <cfg.icone size={28} className={profissao === key ? "text-white" : "text-gray-400 group-hover:text-primary-500"} />
-                    <span className="text-[10px] sm:text-xs font-black">{cfg.titulo}</span>
+                    <div className={`p-2 rounded-2xl transition-colors ${profissao === key ? 'bg-white/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                      <cfg.icone size={24} className={profissao === key ? "text-white" : "text-gray-500 group-hover:text-primary-500"} />
+                    </div>
+                    <span className="text-[10px] font-black leading-tight uppercase tracking-wide">{cfg.titulo}</span>
                   </button>
                 ))}
               </div>
 
               <button 
                 onClick={() => { vibrar(10); setStep(3); }}
-                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em]"
+                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
-                Continuar
+                Confirmar
               </button>
             </motion.div>
           )}
@@ -555,55 +602,68 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
           {step === 3 && (
             <motion.div 
               key="step3"
-              initial={{ opacity: 0, x: 10 }} 
+              initial={{ opacity: 0, x: 20 }} 
               animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: -10 }}
-              className="space-y-8 text-center"
+              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="space-y-10 text-center"
             >
-              <div className="space-y-2">
-                <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.4em]">Objetivo</span>
-                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">Meta de Lucro?</h2>
-                <p className="text-gray-400 text-xs">(Líquido mensal desejado)</p>
+              <div className="space-y-3">
+                <span className="inline-block px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em]">O Grande Objetivo</span>
+                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Qual sua Meta de Lucro?</h2>
+                <p className="text-gray-500 text-xs font-medium max-w-xs mx-auto">Quanto você quer que sobre <b>limpo</b> no seu bolso este mês?</p>
               </div>
 
-              <div className="relative max-w-[200px] mx-auto py-2">
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-200 dark:text-gray-800">R$</span>
+              <div className="relative max-w-[240px] mx-auto py-4">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-300 dark:text-gray-700">R$</span>
                 <input 
                   type="number" 
                   value={meta}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && Number(meta) > 0) {
                       onComplete({ nome, profissao, metaMensal: Number(meta), primeiroAcesso: false });
                     }
                   }}
                   onChange={(e) => setMeta(e.target.value)}
-                  className="w-full bg-transparent text-center text-4xl font-black text-gray-900 dark:text-white outline-none"
+                  className="w-full pl-12 pr-4 bg-transparent text-left text-5xl font-black text-gray-900 dark:text-white outline-none"
                 />
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 to-indigo-500 rounded-full opacity-50" />
               </div>
 
-              <div className="bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50">
-                <p className="text-[11px] text-indigo-900/70 dark:text-indigo-300/70 font-bold leading-tight">
-                  Meta diária sugerida: <br/> R$ {Math.round(Number(meta) / 22).toLocaleString('pt-BR')} (base 22 dias)
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50 flex flex-col items-center gap-2"
+              >
+                <Target size={24} className="text-indigo-500 mb-1" />
+                <p className="text-xs text-indigo-900/70 dark:text-indigo-300/70 font-bold uppercase tracking-widest">
+                  Para bater essa meta, mire em:
                 </p>
-              </div>
+                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                  R$ {Math.round(Number(meta) / 22).toLocaleString('pt-BR')} <span className="text-xs font-bold text-indigo-900/50 dark:text-indigo-300/50 tracking-wider">/dia</span>
+                </div>
+                <p className="text-[10px] text-indigo-900/50 dark:text-indigo-300/50 font-semibold italic mt-1">Considerando 22 dias trabalhados</p>
+              </motion.div>
 
               <button 
+                disabled={Number(meta) <= 0}
                 onClick={() => onComplete({ nome, profissao, metaMensal: Number(meta), primeiroAcesso: false })}
-                className="w-full h-18 bg-primary-500 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-primary-500/30 active:scale-95 transition-all"
+                className="w-full h-16 bg-primary-600 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 hover:bg-primary-700 active:scale-[0.98] transition-all disabled:opacity-50"
               >
-                Finalizar Setup
+                Finalizar Setup e Entrar
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
         {step > 0 && (
-          <div className="mt-8 flex items-center justify-center gap-1.5">
+          <div className="mt-8 flex items-center justify-center gap-2">
             {[1, 2, 3].map(s => (
               <div 
                 key={s} 
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  s === step ? "w-6 bg-primary-500" : s < step ? "w-2 bg-primary-200" : "w-1 bg-gray-100 dark:bg-gray-800"
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  s === step ? "w-8 bg-primary-500" : s < step ? "w-3 bg-primary-200 dark:bg-primary-900" : "w-1.5 bg-gray-200 dark:bg-gray-800"
                 }`} 
               />
             ))}
@@ -750,7 +810,19 @@ export default function App() {
     localStorage.setItem("@MeuCaixa:meta", String(metaDiaria));
   }, [metaDiaria]);
 
-  const [abaConfig, setAbaConfig] = useState<"Interface" | "Dados" | "Perfil">("Interface");
+  const [custosFixosBase, setCustosFixosBase] = useState<{ id: string, descricao: string, valor: number, categoria: string, diaVencimento: number }[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("@MeuCaixa:custosFixos") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("@MeuCaixa:custosFixos", JSON.stringify(custosFixosBase));
+  }, [custosFixosBase]);
+
+  const [abaConfig, setAbaConfig] = useState<"Custos" | "Interface" | "Dados" | "IA" | "Perfil">("Custos");
 
   // --- Funções de Feedback ---
   const vibrar = (ms: number | number[] = 10) => {
@@ -1273,15 +1345,18 @@ export default function App() {
     const diasLucrativos = dias.filter(d => d.lucro > 0).length;
 
     // Cálculo Regra de Ouro (Mês Atual)
-    const categoriasEssenciais = ["moradia", "alimentacao", "transporte", "saude", "contas", "manutencao"];
-    const categoriasLivre = ["lazer", "compras", "educacao"];
+    const categoriasEssenciais = [
+      "moradia", "alimentacao", "transporte", "saude", "contas", 
+      "manutencao", "combustivel", "aluguel", "seguro", "internet", 
+      "equipamento", "materiais", "smartphone", "estacionamento", "ferramentas", "espaco"
+    ];
 
     const gastoEssencial = tMes
       .filter(t => t.tipo === "despesa" && categoriasEssenciais.includes(t.categoria))
       .reduce((acc, t) => acc + t.valor, 0);
     
     const gastoLivre = tMes
-      .filter(t => t.tipo === "despesa" && categoriasLivre.includes(t.categoria))
+      .filter(t => t.tipo === "despesa" && !categoriasEssenciais.includes(t.categoria))
       .reduce((acc, t) => acc + t.valor, 0);
 
     return {
@@ -1476,83 +1551,29 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        <header className="sticky top-0 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md px-3 py-2 z-40 border-b border-gray-100 dark:border-gray-900 shadow-sm transition-all duration-300">
-          <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-2 lg:gap-4">
-            <div className="flex justify-between items-center w-full sm:w-auto gap-3">
-              <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                className="flex items-center gap-2 min-w-0 cursor-pointer"
-                onClick={() => {
-                  vibrar(10);
-                  setTabAtual("resumo");
-                }}
-              >
-                <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-sm shadow-primary-500/30 flex items-center justify-center text-white shrink-0 overflow-hidden">
-                  <div className="absolute inset-0 bg-white/20 transform -translate-x-full hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                  <Wallet size={16} strokeWidth={2.5} className="sm:hidden" />
-                  <Wallet size={18} strokeWidth={2.5} className="hidden sm:block" />
-                </div>
-                <div className="min-w-0 flex items-baseline gap-0.5">
-                  <h1 className="text-xl sm:text-2xl font-extrabold tracking-tighter leading-none text-gray-900 dark:text-white display-font shrink-0">
-                    Auto<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
-                  </h1>
-                </div>
-              </motion.div>
+        <header className="sticky top-0 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md px-4 py-3 z-40 border-b border-gray-100 dark:border-gray-900 shadow-sm transition-all duration-300">
+          <div className="flex justify-between items-center w-full">
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              className="flex items-center gap-3 min-w-0 cursor-pointer"
+              onClick={() => {
+                vibrar(10);
+                setTabAtual("resumo");
+              }}
+            >
+              <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-sm shadow-primary-500/30 flex items-center justify-center text-white shrink-0 overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 transform -translate-x-full hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                <Wallet size={20} strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 flex items-baseline gap-0.5">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tighter leading-none text-gray-900 dark:text-white display-font shrink-0">
+                  Auto<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
+                </h1>
+              </div>
+            </motion.div>
 
-              <div className="flex items-center gap-1 sm:hidden shrink-0">
-                <button
-                  onClick={() => {
-                    vibrar(10);
-                    const modes: ("light" | "dark" | "system")[] = ["light", "dark", "system"];
-                    const next = modes[(modes.indexOf(themeMode) + 1) % modes.length];
-                    setThemeMode(next);
-                    mostrarToast(`Tema: ${next === 'system' ? 'Automático' : next === 'dark' ? 'Escuro' : 'Claro'}`);
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-all"
-                >
-                  {themeMode === "system" ? <Activity size={16} /> : isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-                </button>
-                <button
-                  onClick={() => {
-                    vibrar(10);
-                    setIsMenuOpen(true);
-                  }}
-                  className="p-1.5 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-all"
-                >
-                  <MoreHorizontal size={16} />
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5 w-full sm:w-auto sm:flex sm:gap-2">
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:gap-1.5 py-1.5 px-1 sm:px-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-center overflow-hidden">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-0">Saldo</span>
-                <span className={`text-[10px] sm:text-[11px] font-bold truncate w-full max-w-full ${saldoTotal < 0 ? "text-red-500" : "text-gray-900 dark:text-gray-100"}`}>
-                  {formatarMoeda(saldoTotal)}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:gap-1.5 py-1.5 px-1 sm:px-2.5 bg-green-50/50 dark:bg-green-900/10 rounded-lg text-center overflow-hidden">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-green-600/70 uppercase tracking-wider mb-0.5 sm:mb-0">Hoje</span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-green-600 truncate w-full max-w-full">
-                  {formatarMoeda(ganhoHoje)}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:gap-1.5 py-1.5 px-1 sm:px-2.5 bg-primary-50/50 dark:bg-primary-900/10 rounded-lg text-center overflow-hidden">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-primary-600/70 uppercase tracking-wider mb-0.5 sm:mb-0">Mês</span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-primary-600 truncate w-full max-w-full">
-                  {formatarMoeda(projecaoMensal)}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:gap-1.5 py-1.5 px-1 sm:px-2.5 bg-orange-50/50 dark:bg-orange-900/10 rounded-lg text-center overflow-hidden">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-orange-600/70 uppercase tracking-wider mb-0.5 sm:mb-0">Score</span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-orange-500 truncate w-full max-w-full">
-                  {Math.round((ganhoHoje / metaDiaria) * 100)}%
-                </span>
-              </div>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button
                 onClick={() => {
                   vibrar(10);
@@ -1561,19 +1582,25 @@ export default function App() {
                   setThemeMode(next);
                   mostrarToast(`Tema: ${next === 'system' ? 'Automático' : next === 'dark' ? 'Escuro' : 'Claro'}`);
                 }}
-                className="p-1.5 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-all"
+                className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400 bg-gray-50 hover:bg-primary-50 dark:bg-gray-900 dark:hover:bg-gray-800 rounded-xl transition-all border border-gray-100 dark:border-gray-800"
               >
-                {themeMode === "system" ? <Activity size={15} /> : isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+                <motion.div
+                  key={themeMode}
+                  initial={{ scale: 0.5, opacity: 0, rotate: -45 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                >
+                  {themeMode === "system" ? <Activity size={18} /> : isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-indigo-500" />}
+                </motion.div>
               </button>
-
               <button
                 onClick={() => {
                   vibrar(10);
                   setIsMenuOpen(true);
                 }}
-                className="p-1.5 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-all"
+                className="w-10 h-10 flex items-center justify-center text-gray-700 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 bg-gray-100 hover:bg-primary-50 dark:bg-gray-800 dark:hover:bg-primary-900/30 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
               >
-                <MoreHorizontal size={15} />
+                <Menu size={20} strokeWidth={2.5} />
               </button>
             </div>
           </div>
@@ -1699,8 +1726,15 @@ export default function App() {
                          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center shadow-sm">
                             <PieChartIcon size={20} />
                          </div>
-                         <div>
-                            <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight leading-none">Regra de Ouro</h3>
+                         <div className="group relative">
+                            <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight leading-none cursor-help border-b border-dashed border-gray-400 dark:border-gray-600 inline-block">Regra de Ouro</h3>
+                            <div className="absolute hidden group-hover:block top-full left-0 mt-2 p-3 bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-xl shadow-xl z-30 w-[240px] font-medium leading-relaxed pointer-events-none">
+                              <strong>A Regra 50/30/20</strong> é uma diretriz clássica:<br/><br/>
+                              • <strong>50%</strong> (Necessidades): Custos fixos e operacionais.<br/>
+                              • <strong>30%</strong> (Livre): Desejos e estilo de vida.<br/>
+                              • <strong>20%</strong> (Reserva): Poupança e quitação de dívidas.<br/><br/>
+                              Mantenha o equilíbrio para ter saúde financeira!
+                            </div>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider whitespace-nowrap mt-1">Distribuição 50 | 30 | 20</p>
                          </div>
                       </div>
@@ -1711,10 +1745,10 @@ export default function App() {
                     
                     <div className="space-y-5">
                        {/* Essencial */}
-                       <div className="group">
-                          <div className="flex justify-between items-end mb-1.5">
+                       <div className="group relative">
+                          <div className="flex justify-between items-end mb-1.5 cursor-help">
                              <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Essencial</span>
+                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider border-b border-dashed border-indigo-200 dark:border-indigo-800 inline-block w-max">Essencial</span>
                                 <span className="text-[9px] text-gray-400 font-medium italic">Necessidades básicas</span>
                              </div>
                              <div className="text-right shrink-0">
@@ -1732,13 +1766,16 @@ export default function App() {
                                style={{ width: `${resumoMes.receitas > 0 ? Math.min((gastoEssencial / resumoMes.receitas) * 100, 100) : 0}%` }}
                              ></div>
                           </div>
+                          <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg shadow-xl z-20 w-48 font-medium leading-relaxed pointer-events-none text-center">
+                            Gastos indispensáveis (moradia, alimentação, contas) e custos operacionais do seu negócio.
+                          </div>
                        </div>
                        
                        {/* Livre */}
-                       <div className="group">
-                          <div className="flex justify-between items-end mb-1.5">
+                       <div className="group relative">
+                          <div className="flex justify-between items-end mb-1.5 cursor-help">
                              <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">Livre</span>
+                                <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider border-b border-dashed border-purple-200 dark:border-purple-800 inline-block w-max">Livre</span>
                                 <span className="text-[9px] text-gray-400 font-medium italic">Estilo de vida & desejos</span>
                              </div>
                              <div className="text-right shrink-0">
@@ -1756,13 +1793,16 @@ export default function App() {
                                style={{ width: `${resumoMes.receitas > 0 ? Math.min((gastoLivre / resumoMes.receitas) * 100, 100) : 0}%` }}
                              ></div>
                           </div>
+                          <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg shadow-xl z-20 w-48 font-medium leading-relaxed pointer-events-none text-center">
+                            Gastos supérfluos, lazer, compras, academia, assinaturas. Lembre-se, controle é tudo!
+                          </div>
                        </div>
 
                        {/* Reserva */}
-                       <div className="group">
-                          <div className="flex justify-between items-end mb-1.5">
+                       <div className="group relative">
+                          <div className="flex justify-between items-end mb-1.5 cursor-help">
                              <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Reserva</span>
+                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider border-b border-dashed border-emerald-200 dark:border-emerald-800 inline-block w-max">Reserva</span>
                                 <span className="text-[9px] text-gray-400 font-medium italic">Futuro & segurança</span>
                              </div>
                              <div className="text-right shrink-0">
@@ -1779,6 +1819,9 @@ export default function App() {
                                className="h-full rounded-full transition-all duration-1000 bg-emerald-500" 
                                style={{ width: `${resumoMes.receitas > 0 ? Math.min((Math.max(0, resumoMes.receitas - resumoMes.despesas) / resumoMes.receitas) * 100, 100) : 0}%` }}
                              ></div>
+                          </div>
+                          <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg shadow-xl z-20 w-48 font-medium leading-relaxed pointer-events-none text-center">
+                            Seu lucro real! Use para montar uma reserva de emergência ou quitar dívidas.
                           </div>
                        </div>
                     </div>
@@ -2725,29 +2768,139 @@ export default function App() {
             key="modal-configuracoes"
             isOpen={isMenuOpen}
             onClose={() => setIsMenuOpen(false)}
-            title="Ajustes e Sistema"
-            subtitle="Configure sua experiência AutoCaixa"
-            icon={Settings}
+            title="Menu Principal"
+            subtitle="Central de controle do AutoCaixa"
+            icon={Menu}
           >
             <div className="py-4">
-              {/* Navegação por Abas Interna */}
-              <div className="flex bg-gray-100 dark:bg-gray-900/50 p-1 rounded-xl mb-6 border border-gray-200/50 dark:border-white/5 mx-1">
-                {(["Interface", "Dados", "IA", "Perfil"] as const).map((aba) => (
-                  <button
-                    key={aba}
-                    onClick={() => setAbaConfig(aba)}
-                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
-                      abaConfig === aba 
-                        ? "bg-white dark:bg-gray-800 text-primary-600 shadow-sm" 
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {aba}
-                  </button>
-                ))}
+              {/* Navegação por Cards Interna */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
+                {[
+                  { id: "Custos", icon: Lock, desc: "Recorrentes" },
+                  { id: "Interface", icon: LayoutDashboard, desc: "Aparência" },
+                  { id: "Dados", icon: BoxIcon, desc: "Backup" },
+                  { id: "IA", icon: Sparkles, desc: "Config. IA" },
+                  { id: "Perfil", icon: User, desc: "Sua Conta" },
+                ].map((aba) => {
+                  const Icon = aba.icon;
+                  return (
+                    <button
+                      key={aba.id}
+                      onClick={() => setAbaConfig(aba.id as any)}
+                      className={`flex flex-col items-start justify-center p-3 sm:p-4 rounded-2xl border-2 transition-all group ${
+                        abaConfig === aba.id 
+                          ? "bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-600 dark:text-primary-400 shadow-sm" 
+                          : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-500 hover:border-primary-200 dark:hover:border-primary-900/50"
+                      }`}
+                    >
+                      <div className={`mb-2 p-2 rounded-xl transition-colors ${abaConfig === aba.id ? "bg-primary-100 dark:bg-primary-900/50" : "bg-gray-50 dark:bg-gray-800 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30"}`}>
+                        <Icon size={18} strokeWidth={abaConfig === aba.id ? 2.5 : 2} className={abaConfig === aba.id ? "text-primary-600 dark:text-primary-400" : "text-gray-500"} />
+                      </div>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-white leading-tight">{aba.id}</span>
+                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mt-0.5">{aba.desc}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="space-y-6 px-1">
+                {abaConfig === "Custos" && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                    <div className="bg-primary-50 dark:bg-primary-900/10 p-4 rounded-2xl border border-primary-100 dark:border-primary-900/30">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800 flex items-center justify-center shrink-0">
+                          <Info size={16} className="text-primary-600 dark:text-primary-300" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Meus Custos Fixos</h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                            Adicione suas despesas recorrentes (aluguel, internet, seguros). Ao mudar de mês, você pode lançar todos eles de uma só vez apertando o botão abaixo.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                       {custosFixosBase.length === 0 ? (
+                         <div className="text-center py-6 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-800 text-gray-400 text-xs font-medium">
+                           Nenhum custo fixo cadastrado.
+                         </div>
+                       ) : (
+                         custosFixosBase.map((cf) => (
+                           <div key={cf.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                              <div>
+                                <span className="block text-sm font-bold text-gray-900 dark:text-white">{cf.descricao}</span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[10px] text-gray-500 font-medium">Todo dia {cf.diaVencimento}</span>
+                                  <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                  <span className="text-[10px] text-gray-500 font-medium capitalize">{cf.categoria}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-black text-red-500">{formatarMoeda(cf.valor)}</span>
+                                <button 
+                                  onClick={() => {
+                                    if(confirm("Remover este custo fixo?")) {
+                                      setCustosFixosBase(prev => prev.filter(x => x.id !== cf.id));
+                                    }
+                                  }}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                           </div>
+                         ))
+                       )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                       <button 
+                         onClick={() => {
+                           const desc = prompt("Nome do Custo (ex: Aluguel):");
+                           if(!desc) return;
+                           const valorStr = prompt("Valor mensal (somente números e vírgula, ex: 1500,00):");
+                           if(!valorStr) return;
+                           const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'));
+                           if(isNaN(valor)) return alert("Valor inválido.");
+                           const diaStr = prompt("Dia do vencimento (1 a 31):");
+                           const dia = diaStr ? parseInt(diaStr) : 5;
+                           setCustosFixosBase([...custosFixosBase, { id: Math.random().toString(36).substr(2, 9), descricao: desc, valor, categoria: "moradia", diaVencimento: isNaN(dia) ? 5 : dia }]);
+                         }}
+                         className="flex items-center justify-center gap-1 p-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-[11px] uppercase tracking-widest rounded-xl hover:opacity-90 transition-all"
+                       >
+                         <Plus size={14} />
+                         Novo Custo
+                       </button>
+
+                       <button 
+                         onClick={() => {
+                           if(custosFixosBase.length === 0) return alert("Nenhum custo cadastrado.");
+                           const hoje = new Date();
+                           const prefix = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-`;
+                           const novos = custosFixosBase.map(cf => ({
+                              id: "cf_" + cf.id + "_" + Date.now(),
+                              tipo: "despesa" as const,
+                              valor: cf.valor,
+                              categoria: cf.categoria,
+                              descricao: cf.descricao,
+                              data: `${prefix}${String(Math.min(cf.diaVencimento, 28)).padStart(2, '0')}`,
+                              custoFixo: true,
+                              tags: []
+                           }));
+                           setTransacoes([...novos, ...transacoes]);
+                           mostrarToast("Custos lançados!");
+                         }}
+                         className="flex items-center justify-center gap-1 p-3 bg-primary-500 text-white font-bold text-[11px] uppercase tracking-widest rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50"
+                         disabled={custosFixosBase.length === 0}
+                       >
+                         <CheckCircle2 size={14} />
+                         Lançar no Mês
+                       </button>
+                    </div>
+                  </motion.div>
+                )}
+
                 {abaConfig === "Interface" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                     <div>
@@ -3028,28 +3181,25 @@ function FormularioLancamento({
   };
 
   return (
-    <div className="min-h-full flex flex-col pb-12 max-w-sm mx-auto">
-      <div className="flex bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl mb-4 shadow-inner shrink-0">
+    <div className="min-h-full flex flex-col pb-8 w-full max-w-lg mx-auto">
+      <div className="flex p-1 rounded-xl mb-2 shrink-0 bg-transparent flex-row justify-center space-x-4">
         <button
-          onClick={() => setTipo("receita")}
-          className={`flex-1 py-3 text-xs font-semibold tracking-wider rounded-xl transition-all duration-300 ${tipo === "receita" ? "bg-white dark:bg-gray-700 text-green-600 shadow-sm" : "text-gray-500"}`}
+          onClick={() => { setTipo("receita"); vibrar(10); }}
+          className={`px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "receita" ? "border-green-500 text-green-600" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
         >
           Entrada
         </button>
         <button
-          onClick={() => setTipo("despesa")}
-          className={`flex-1 py-3 text-xs font-semibold tracking-wider rounded-xl transition-all duration-300 ${tipo === "despesa" ? "bg-white dark:bg-gray-700 text-red-500 shadow-sm" : "text-gray-500"}`}
+          onClick={() => { setTipo("despesa"); vibrar(10); }}
+          className={`px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "despesa" ? "border-red-500 text-red-500" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
         >
           Saída
         </button>
       </div>
 
-      <div className="text-center mb-4">
-        <span className="text-xs font-medium text-gray-500  tracking-widest">
-          Valor do Lançamento
-        </span>
-        <div className="flex items-center justify-center mt-2 group">
-          <span className="text-xl font-light mr-2 text-gray-400 dark:text-gray-500 transition-colors group-focus-within:text-primary-500 display-font">
+      <div className="mb-6 mt-4 flex flex-col items-center">
+        <div className="flex items-center justify-center w-full mb-3">
+          <span className={`text-3xl font-light mr-1.5 transition-colors display-font ${tipo === "receita" ? "text-green-500/50" : "text-red-500/50"}`}>
             R$
           </span>
           <input
@@ -3058,16 +3208,16 @@ function FormularioLancamento({
             value={valor}
             onChange={(e) => setValor(formatCurrencyEntry(e.target.value))}
             placeholder="0,00"
-            className={`text-xl font-light bg-transparent outline-none text-center w-full max-w-[280px] transition-all tracking-tighter display-font ${tipo === "receita" ? "text-green-600" : "text-red-500"}`}
+            className={`text-5xl font-black bg-transparent outline-none text-center transition-all tracking-tighter display-font placeholder:opacity-30 ${tipo === "receita" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} max-w-[220px]`}
           />
         </div>
 
-        <div className="flex justify-center gap-2 mt-4">
-          {[10, 50, 100].map((v) => (
+        <div className="flex justify-center flex-wrap gap-2">
+          {[10, 50, 100, 200].map((v) => (
             <button
               key={v}
-              onClick={() => handleQuickAdd(v)}
-              className="px-5 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-400 transition-colors"
+              onClick={() => { handleQuickAdd(v); vibrar(5); }}
+              className={`px-3 py-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-[11px] font-bold transition-all border border-gray-200 dark:border-gray-700 ${tipo === 'receita' ? 'text-green-600/70' : 'text-red-500/70'}`}
             >
               + {v}
             </button>
@@ -3075,159 +3225,172 @@ function FormularioLancamento({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
-        {(tipo === "receita" ? categoriasReceita : categoriasDespesa).map(
-          (c) => (
-            <motion.button
-              key={c.id}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setCat(c.id)}
-              className="flex flex-col items-center gap-2"
-            >
-              <div
-                className={`w-10 h-10 flex items-center justify-center rounded-[1.25rem] transition-all duration-300 ${cat === c.id ? (tipo === "receita" ? "bg-green-600 text-white shadow-lg shadow-green-600/30" : "bg-red-500 text-white shadow-lg shadow-red-500/30") : "bg-gray-50 dark:bg-gray-900 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+      <div className="mb-6">
+        <label className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1 block mb-3">Categoria</label>
+        <div className="flex overflow-x-auto custom-scrollbar gap-2 pb-2 px-1">
+          {(tipo === "receita" ? categoriasReceita : categoriasDespesa).map(
+            (c) => (
+              <motion.button
+                key={c.id}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setCat(c.id); vibrar(10); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 border transition-all ${cat === c.id ? (tipo === "receita" ? "bg-green-500 border-green-500 text-white shadow-md shadow-green-500/20" : "bg-red-500 border-red-500 text-white shadow-md shadow-red-500/20") : "bg-transparent border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
               >
-                <c.icone size={22} strokeWidth={2} />
-              </div>
-              <span
-                className={`text-[11px] font-medium tracking-wide transition-colors text-center leading-none ${cat === c.id ? (tipo === "receita" ? "text-green-600" : "text-red-500") : "text-gray-500"}`}
-              >
-                {c.nome}
-              </span>
-            </motion.button>
-          ),
-        )}
+                <c.icone size={14} strokeWidth={2.5} />
+                <span className="text-[11px] font-bold tracking-wide">
+                  {c.nome}
+                </span>
+              </motion.button>
+            ),
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <motion.div
-          whileTap={{ scale: 0.98 }}
-          className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl relative cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 transition-all border border-transparent dark:border-gray-800"
-          onClick={() => setShowCalendar(true)}
+      <div className="grid grid-cols-2 gap-4 mb-6 px-1">
+        <div 
+          className="flex flex-col justify-center border-b border-gray-200 dark:border-gray-800 pb-2 cursor-pointer group"
+          onClick={() => { vibrar(10); setShowCalendar(true); }}
         >
-          <span className="text-[11px] font-medium text-gray-500  tracking-wider block mb-1">
+          <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-1">
             Data
           </span>
-          <div className="flex items-center gap-2 text-sm font-semibold tracking-tight text-gray-800 dark:text-gray-200">
-            <CalendarIcon size={16} className="text-primary-500" />{" "}
+          <div className="flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-200">
+            <CalendarIcon size={14} className="text-gray-400 group-hover:text-primary-500 transition-colors" />
             {formatarDataBR(data)}
           </div>
-        </motion.div>
+        </div>
 
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl focus-within:bg-white dark:focus-within:bg-gray-800 focus-within:ring-2 ring-primary-500/20 transition-all border border-transparent dark:border-gray-800">
-          <span className="text-[11px] font-medium text-gray-500  tracking-wider block mb-1">
-            Descrição
+        <div className="flex flex-col justify-center border-b border-gray-200 dark:border-gray-800 pb-2 focus-within:border-primary-500 transition-colors">
+          <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-1">
+            Descrição (Opcional)
           </span>
           <input
             type="text"
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            placeholder="Opcional"
-            className="bg-transparent outline-none text-sm font-semibold w-full placeholder:text-gray-400 dark:placeholder:text-gray-600 text-gray-800 dark:text-gray-200"
+            placeholder="No que você gastou?"
+            className="bg-transparent outline-none text-sm font-bold w-full placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-800 dark:text-gray-200"
           />
         </div>
       </div>
 
-      <div className="mb-4">
-        <label className="text-[11px] font-semibold text-gray-400  tracking-wider mb-2 block uppercase">Tags (Centros de Custo)</label>
-        <div className="flex flex-wrap gap-2 mb-2">
-          {tags.map((tag, i) => (
-             <span key={`form-tag-${tag}-${i}`} className="bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 text-xs px-2.5 py-1 rounded-md flex items-center gap-1 font-medium">
-                #{tag}
-                <button onClick={() => setTags(tags.filter((_, idx) => idx !== i))} className="hover:text-primary-900 dark:hover:text-primary-100 ml-1">
-                   <Plus size={12} className="rotate-45" />
-                </button>
-             </span>
-          ))}
+      <div className="flex flex-col gap-4 mb-6 px-1">
+        <div className="flex flex-col justify-center border-b border-gray-200 dark:border-gray-800 pb-2 focus-within:border-primary-500 transition-colors">
+            <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Tags / Projetos</span>
+            <div className="flex flex-wrap gap-2 items-center">
+                {tags.map((tag, i) => (
+                   <motion.span 
+                     initial={{ scale: 0.8, opacity: 0 }}
+                     animate={{ scale: 1, opacity: 1 }}
+                     key={`form-tag-${tag}-${i}`} 
+                     className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1.5 font-bold tracking-wide"
+                   >
+                      #{tag}
+                      <button onClick={() => { vibrar(5); setTags(tags.filter((_, idx) => idx !== i)); }} className="hover:text-red-500 transition-colors">
+                         <Plus size={10} className="rotate-45" strokeWidth={3} />
+                      </button>
+                   </motion.span>
+                ))}
+                <input
+                   type="text"
+                   value={tagInput}
+                   onChange={(e) => setTagInput(e.target.value)}
+                   onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                         e.preventDefault();
+                         const val = tagInput.trim().replace(/^#/, '');
+                         if (val && !tags.includes(val)) {
+                            setTags([...tags, val]);
+                            vibrar(10);
+                         }
+                         setTagInput("");
+                      }
+                   }}
+                   placeholder={tags.length === 0 ? "Adicionar Tag" : ""}
+                   className="flex-1 min-w-[100px] bg-transparent outline-none font-bold text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400"
+                />
+            </div>
         </div>
-        <input
-           type="text"
-           value={tagInput}
-           onChange={(e) => setTagInput(e.target.value)}
-           onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ',') {
-                 e.preventDefault();
-                 const val = tagInput.trim().replace(/^#/, '');
-                 if (val && !tags.includes(val)) {
-                    setTags([...tags, val]);
-                 }
-                 setTagInput("");
-              }
-           }}
-           placeholder="Ex: ferias, carro, nubank (pressione Enter)"
-           className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none font-medium text-sm focus:ring-4 ring-primary-500/10 border border-gray-100 dark:border-gray-800 transition-all text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
-        />
-      </div>
 
-      {tipo === "despesa" && (
-        <div className="flex items-center justify-between mb-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-transparent dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Custo Fixo Recorrente</span>
-          </div>
-          <button
-            onClick={() => setCustoFixo(!custoFixo)}
-            className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${custoFixo ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-700"}`}
+        {tipo === "despesa" && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-800"
           >
-            <motion.div
-              animate={{ x: custoFixo ? 16 : 0 }}
-              className="w-4 h-4 bg-white rounded-full shadow-sm"
-            />
+            <div className="flex items-center gap-2">
+               <Lock size={14} className="text-gray-400" />
+               <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Custo Fixo Mensal</span>
+            </div>
+            <button
+              onClick={() => { vibrar(10); setCustoFixo(!custoFixo); }}
+              className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors relative shrink-0 ${custoFixo ? "bg-indigo-500" : "bg-gray-300 dark:bg-gray-700"}`}
+            >
+              <motion.div
+                initial={false}
+                animate={{ x: custoFixo ? 20 : 0 }}
+                className="w-4 h-4 bg-white rounded-full shadow-sm"
+              />
+            </button>
+          </motion.div>
+        )}
+
+        <div className="flex items-center pb-2">
+          <input 
+            type="file" 
+            accept="image/*" 
+            capture="environment" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={(e) => { 
+              if(e.target.files && e.target.files[0]) {
+                vibrar(20);
+                lerRecibo(e.target.files[0]);
+              }
+            }} 
+          />
+          <button
+            onClick={() => { vibrar(10); fileInputRef.current?.click(); }}
+            disabled={processandoRecibo}
+            className="flex items-center gap-2 text-sm font-bold text-primary-500 hover:text-primary-600 transition-colors px-1"
+          >
+            {processandoRecibo ? (
+              <Loader2 size={16} className="animate-spin shrink-0" />
+            ) : (
+              <Camera size={16} className="shrink-0" />
+            )}
+            <span>{processandoRecibo ? "Analisando..." : "Escanear Nota com IA"}</span>
           </button>
         </div>
-      )}
-
-      <div className="flex items-center justify-center mb-4">
-        <input 
-          type="file" 
-          accept="image/*" 
-          capture="environment"
-          className="hidden" 
-          ref={fileInputRef} 
-          onChange={(e) => e.target.files && e.target.files[0] ? lerRecibo(e.target.files[0]) : null} 
-        />
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={processandoRecibo}
-          className="flex items-center justify-center gap-2 p-3 w-full border border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
-        >
-          {processandoRecibo ? (
-            <Loader2 size={18} className="animate-spin text-primary-500" />
-          ) : (
-            <Camera size={18} className="text-primary-500" />
-          )}
-          {processandoRecibo ? "Analisando com IA..." : "Escanear Nota / Recibo"}
-        </motion.button>
       </div>
 
       {salvoComSucesso && (
         <motion.div
-           initial={{ opacity: 0, y: 10 }}
-           animate={{ opacity: 1, y: 0 }}
-           className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-3 text-green-600 dark:text-green-400"
+           initial={{ opacity: 0, y: 10, scale: 0.95 }}
+           animate={{ opacity: 1, y: 0, scale: 1 }}
+           className="mb-3 p-2 bg-green-500 text-white rounded-xl flex items-center justify-center gap-2 text-center shadow-md shadow-green-500/20"
         >
-           <CheckCircle2 size={18} />
-           <p className="text-xs font-bold">Lançamento realizado! O que mais temos pra hoje?</p>
+           <CheckCircle2 size={16} strokeWidth={2.5} />
+           <p className="text-[10px] font-black tracking-wide">Lançamento salvo!</p>
         </motion.div>
       )}
 
       <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.02, y: -1 }}
+        whileTap={{ scale: 0.98 }}
         disabled={!valor || !cat}
         onClick={() => {
           vibrar(25);
           handleSalvar();
         }}
-        className={`w-full py-3 text-white rounded-xl font-semibold tracking-wide text-sm transition-all flex items-center justify-center gap-2 mt-8 ${!valor || !cat ? "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed" : "bg-primary-600 shadow-lg shadow-primary-600/30 hover:bg-primary-700"}`}
+        className={`w-full py-3 text-white rounded-xl font-black uppercase tracking-[0.1em] text-[11px] transition-all flex items-center justify-center gap-2 shadow-sm ${!valor || !cat ? "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed shadow-none" : tipo === "receita" ? "bg-green-600 shadow-green-600/20 hover:bg-green-700" : "bg-primary-600 shadow-primary-600/20 hover:bg-primary-700"}`}
       >
         {edicao ? (
-          <Pencil size={18} strokeWidth={2.5} />
+          <Pencil size={14} strokeWidth={2.5} />
         ) : (
-          <CheckCircle2 size={18} strokeWidth={2.5} />
+          <CheckCircle2 size={14} strokeWidth={2.5} />
         )}
-        {edicao ? "Atualizar" : "Confirmar Lançamento"}
+        {edicao ? "Salvar Edição" : tipo === "receita" ? "Confirmar Entrada" : "Confirmar Saída"}
       </motion.button>
 
       <AnimatePresence>
