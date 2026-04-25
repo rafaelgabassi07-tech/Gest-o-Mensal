@@ -865,7 +865,7 @@ export default function App() {
       }))
       .sort((a, b) => b.valor - a.valor);
 
-    const topCat = todasCategoriasGastos.slice(0, 3);
+    const topCat = todasCategoriasGastos.slice(0, 5);
 
     const rFonte = Object.entries(fonteReceitas)
       .map(([id, valor]) => ({
@@ -1482,134 +1482,77 @@ export default function App() {
                       setIsDespesasModalOpen(true);
                     }}
                   >
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-xs font-semibold text-gray-500  tracking-wider group-hover:text-primary-500 transition-colors">
-                          Onde está gastando (Mês)
+                        <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center">
+                          <PieChartIcon size={16} className="text-primary-500" />
+                        </div>
+                        <h3 className="text-xs font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest leading-none">
+                          Gastos por Categoria
                         </h3>
                       </div>
-                      <BarChart3 size={16} className="text-gray-400" />
+                      <div className="px-2 py-1 bg-gray-50 dark:bg-white/5 rounded-md">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Este Mês</span>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-3">
-                      {topCategorias.length > 0 && (
-                        <div className="w-full h-[220px] outline-none focus:outline-none mt-2">
-                          <ResponsiveContainer
-                            width="100%"
-                            height="100%"
-                            className="outline-none"
-                          >
-                            <BarChart
-                              data={topCategorias}
-                              layout="vertical"
-                              margin={{ left: -10, right: 30 }}
-                            >
-                              <defs>
-                                <linearGradient id="barBlue" x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor="#3B82F6" />
-                                  <stop offset="100%" stopColor="#60A5FA" />
-                                </linearGradient>
-                                <linearGradient id="barRed" x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor="#EF4444" />
-                                  <stop offset="100%" stopColor="#F87171" />
-                                </linearGradient>
-                                <linearGradient id="barGreen" x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor="#10B981" />
-                                  <stop offset="100%" stopColor="#34D399" />
-                                </linearGradient>
-                                <linearGradient id="barYellow" x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor="#F59E0B" />
-                                  <stop offset="100%" stopColor="#FBBF24" />
-                                </linearGradient>
-                                <linearGradient id="barPurple" x1="0" y1="0" x2="1" y2="0">
-                                  <stop offset="0%" stopColor="#8B5CF6" />
-                                  <stop offset="100%" stopColor="#A78BFA" />
-                                </linearGradient>
-                              </defs>
-                              <XAxis type="number" hide />
-                              <YAxis
-                                dataKey="nome"
-                                type="category"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{
-                                  fontSize: 10,
-                                  fontWeight: 500,
-                                  fill: "#9CA3AF",
-                                }}
-                                width={80}
-                              />
-                              <ReTooltip
-                                cursor={{ fill: "transparent" }}
-                                content={
-                                  <CustomTooltip isDarkMode={isDarkMode} />
-                                }
-                              />
-                              <Bar
-                                dataKey="valor"
-                                radius={[0, 8, 8, 0]}
-                                barSize={28}
-                                isAnimationActive={true}
-                                animationDuration={1500}
-                                animationBegin={200}
-                              >
-                                {topCategorias.map((_, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={
-                                      [
-                                        "url(#barBlue)",
-                                        "url(#barRed)",
-                                        "url(#barGreen)",
-                                        "url(#barYellow)",
-                                        "url(#barPurple)",
-                                      ][index % 5]
-                                    }
-                                  />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                    <div className="space-y-5">
+                      {topCategorias.length === 0 ? (
+                        <div className="py-10 text-center bg-gray-50/50 dark:bg-white/[0.02] rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                          <p className="text-[10px] font-bold text-gray-400/60 uppercase tracking-widest whitespace-nowrap">
+                            Sem registros encontrados
+                          </p>
                         </div>
-                      )}
-
-                      <div className="grid grid-cols-1 gap-2 mt-2">
-                        {topCategorias.length === 0 ? (
-                          <div className="py-3 text-center bg-gray-50 dark:bg-gray-800/30 rounded-xl">
-                            <p className="text-xs font-semibold text-gray-400  tracking-widest">
-                              Nenhuma despesa este mês
-                            </p>
-                          </div>
-                        ) : (
-                          topCategorias.map((cat, index) => (
-                            <div
-                              key={`resumo-cat-${cat.id}-${index}`}
-                              className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl"
-                            >
-                              <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center gap-2">
+                      ) : (
+                        <div className="space-y-6">
+                          {topCategorias.map((cat, index) => (
+                            <div key={`resumo-cat-${cat.id}-${index}`} className="group">
+                              <div className="flex justify-between items-end mb-2.5">
+                                <div className="flex items-center gap-2.5">
                                   <div
-                                    className={`w-2 h-2 rounded-full ${["bg-primary-500", "bg-red-500", "bg-green-500", "bg-orange-500"][index % 4]}`}
+                                    className={`w-1.5 h-1.5 rounded-full ring-4 ring-offset-0 ${
+                                      [
+                                        "bg-blue-500 ring-blue-500/10",
+                                        "bg-rose-500 ring-rose-500/10",
+                                        "bg-emerald-500 ring-emerald-500/10",
+                                        "bg-amber-500 ring-amber-500/10",
+                                        "bg-violet-500 ring-violet-500/10"
+                                      ][index % 5]
+                                    }`}
                                   />
-                                  <span className="text-xs font-semibold  tracking-wider text-gray-700 dark:text-gray-300">
+                                  <span className="text-[11px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 group-hover:text-primary-500 transition-colors">
                                     {cat.nome}
                                   </span>
                                 </div>
-                                <span className="text-sm font-medium text-red-500 display-font">
-                                  {formatarMoeda(cat.valor)}
-                                </span>
+                                <div className="text-right">
+                                  <div className="text-xs font-black text-gray-900 dark:text-white display-font mb-0.5">
+                                    {formatarMoeda(cat.valor)}
+                                  </div>
+                                  <div className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                                    {cat.pct.toFixed(0)}% do total
+                                  </div>
+                                </div>
                               </div>
-                              <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                              <div className="relative w-full h-2 bg-gray-100 dark:bg-white/[0.03] rounded-full overflow-hidden shadow-inner">
                                 <motion.div
                                   initial={{ width: 0 }}
                                   animate={{ width: `${cat.pct}%` }}
-                                  className={`h-full rounded-full ${["bg-primary-500", "bg-red-500", "bg-green-500", "bg-orange-500"][index % 4]}`}
+                                  transition={{ duration: 1.2, ease: "circOut" }}
+                                  className={`absolute top-0 left-0 h-full rounded-full ${
+                                    [
+                                      "bg-gradient-to-r from-blue-600 to-blue-400",
+                                      "bg-gradient-to-r from-rose-600 to-rose-400",
+                                      "bg-gradient-to-r from-emerald-600 to-emerald-400",
+                                      "bg-gradient-to-r from-amber-600 to-amber-400",
+                                      "bg-gradient-to-r from-violet-600 to-violet-400"
+                                    ][index % 5]
+                                  }`}
                                 />
                               </div>
                             </div>
-                          ))
-                        )}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
 
