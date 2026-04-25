@@ -1792,7 +1792,10 @@ export default function App() {
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.4}
+            dragDirectionLock
             onDragEnd={(_, info) => {
+              if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) return;
+              
               const threshold = 100;
               const tabs: ("resumo" | "adicionar" | "historico")[] = ["resumo", "adicionar", "historico"];
               const currentIndex = tabs.indexOf(tabAtual);
@@ -2239,20 +2242,6 @@ export default function App() {
                             }}
                           >
                             <YAxis hide domain={[0, 'auto']} />
-                            <Legend 
-                              verticalAlign="top" 
-                              align="right" 
-                              iconType="circle" 
-                              iconSize={8}
-                              wrapperStyle={{
-                                fontSize: '9px',
-                                fontWeight: 900,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.1em',
-                                paddingBottom: '20px'
-                              }}
-                              formatter={(value) => <span style={{ color: '#9CA3AF' }}>{value}</span>}
-                            />
                             <CartesianGrid
                               strokeDasharray="4 4"
                               vertical={false}
@@ -3511,6 +3500,25 @@ function FormularioLancamento({
   const [showCalendar, setShowCalendar] = useState(false);
   const [salvoComSucesso, setSalvoComSucesso] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (edicao) {
+      setTipo(edicao.tipo);
+      setValor(edicao.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 }));
+      setCat(edicao.categoria || "");
+      setData(edicao.data || getLocalISODate());
+      setDesc(edicao.descricao || "");
+      setCustoFixo(edicao.custoFixo || false);
+      setTags(edicao.tags || []);
+    } else {
+      setValor("");
+      setDesc("");
+      setCat("");
+      setTags([]);
+      setCustoFixo(false);
+      setData(getLocalISODate());
+    }
+  }, [edicao]);
 
   const lerRecibo = async (file: File) => {
     alert("A leitura de recibos via IA foi desativada.");

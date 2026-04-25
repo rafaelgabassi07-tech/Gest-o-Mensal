@@ -84,8 +84,8 @@ ESTADO ATUAL:
 REGRAS:
 1. NUNCA diga que é uma IA. Você é o parceiro de trampo do usuário.
 2. Responda num tom humano, tipo: "Fala meu velho", "Opa, bom dia guerreiro", "E aí chefia, tudo no esquema?".
-3. OBRIGATÓRIO (DIRETRIZ DE SEGURANÇA MÁXIMA): O usuário exigiu que o scraper (sua ferramenta de busca) rode em TODAS as interações. Portanto, para CADA mensagem que você receber (mesmo que seja um "Oi", "Tudo bem?", ou uma dúvida banal), você DEVE EXECUTAR a função "buscarNaInternet" ANTES de responder. Se for só um "oi", busque por "notícias urgentes Brasil hoje". Se for uma dúvida, busque no Google. Nunca responda sem usar a tool "buscarNaInternet".
-4. Integre o resultado da sua busca na resposta para mostrar que você pescou a informação ao vivo.`;
+3. OBRIGATÓRIO: Use a inteligência de busca conectada para fundamentar suas respostas. O usuário exigiu total integração com a IA nativa de busca (Google Search).
+4. Integre dados de busca web na resposta para mostrar que você pegou a informação recente do Google.`;
 
       const contents = (historico || []).map((m: any) => ({
         role: m.role === "user" ? "user" : "model",
@@ -97,18 +97,8 @@ REGRAS:
         systemInstruction,
         temperature: 0.7,
         tools: [{
-          functionDeclarations: [{
-            name: "buscarNaInternet",
-            description: "Busca informações atualizadas na internet. Ex: 'Preço da gasolina hoje', 'Notícias', ou qualquer assunto para manter a conversa.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                query: { type: "STRING", description: "A consulta da busca no Google/DuckDuckGo." }
-              },
-              required: ["query"]
-            }
-          }]
-        }]
+          googleSearch: {}
+        }],
       };
 
       let response = await ai.models.generateContent({
@@ -116,54 +106,6 @@ REGRAS:
         contents,
         config: configGenAI as any
       });
-
-      if (response.functionCalls && response.functionCalls.length > 0) {
-        const call = response.functionCalls[0];
-        if (call.name === "buscarNaInternet") {
-          const query = (call.args as any).query;
-          let searchResultsStr = "Nenhum resultado encontrado.";
-          try {
-            // Buscando no DuckDuckGo
-            const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-            const searchResponse = await fetch(url, {
-              headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" }
-            });
-            const html = await searchResponse.text();
-            const $ = cheerio.load(html);
-            const results: any[] = [];
-            $(".result").each((i, el) => {
-              if (i >= 5) return;
-              const title = $(el).find(".result__title").text().trim();
-              const snippet = $(el).find(".result__snippet").text().trim();
-              if (title && snippet) results.push({ title, snippet });
-            });
-            if (results.length > 0) {
-              searchResultsStr = JSON.stringify(results);
-            }
-          } catch (e: any) {
-            searchResultsStr = "Erro de rede ao buscar: " + e.message;
-          }
-
-          // Add function call and response back to context
-          contents.push({ role: "model", parts: [{ functionCall: call as any }] });
-          contents.push({
-            role: "user",
-            parts: [{
-              functionResponse: {
-                name: "buscarNaInternet",
-                response: { result: searchResultsStr }
-              }
-            }]
-          });
-
-          // Request final text
-          response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents,
-            config: configGenAI as any
-          });
-        }
-      }
 
       res.json({ content: response.text || "Sem resposta." });
     } catch (e: any) {
