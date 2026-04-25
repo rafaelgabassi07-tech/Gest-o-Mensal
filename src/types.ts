@@ -35,14 +35,3 @@ export interface UserProfile {
   metaMensal: number;
   primeiroAcesso: boolean;
 }
-
-export type NivelDetalheAI = "resumido" | "padrao" | "detalhado";
-
-export interface ConfiguracaoAI {
-  nivelDetalhe: NivelDetalheAI;
-  focarEmGanhos: boolean;
-  focarEmGastos: boolean;
-  hapticosAtivos: boolean;
-  dicasProativas?: boolean;
-  baseConhecimento?: string;
-}

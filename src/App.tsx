@@ -1,15 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import Markdown from "react-markdown";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import {
-  gerarInsightsNativos,
-  AIInsight,
-  responderChat,
-  AIChatMessage,
-  APSentiment,
-} from "./services/aiAssistant";
 import {
   Home,
   Plus,
@@ -104,8 +96,6 @@ import {
   Transacao,
   Categoria,
   SemanaAgrupada,
-  ConfiguracaoAI,
-  NivelDetalheAI,
   UserProfile,
 } from "./types";
 
@@ -366,26 +356,6 @@ const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
 };
 
 // --- App Component ---
-const RainbowAIIcon = ({ size = 16, className = "" }: { size?: number; className?: string }) => {
-  return (
-  <div className={`relative inline-flex items-center justify-center group ${className}`} style={{ width: size, height: size }}>
-    <span 
-      className="font-black italic tracking-tighter bg-gradient-to-r from-red-500 via-orange-500 via-yellow-500 via-green-500 via-primary-500 via-indigo-500 via-purple-500 to-red-500 bg-clip-text text-transparent animate-rainbow-move pointer-events-none select-none z-10 relative drop-shadow-sm flex items-center justify-center"
-      style={{ fontSize: `${size * 0.8}px`, lineHeight: 1 }}
-    >
-      IA
-    </span>
-    <div 
-      className="absolute inset-0 blur-[8px] opacity-50 animate-rainbow-move group-hover:opacity-80 transition-opacity"
-      style={{
-        background: 'linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #6366f1, #a855f7, #ef4444)',
-        borderRadius: '50%',
-        backgroundSize: '200% 100%'
-      }}
-    />
-  </div>
-)};
-
 const ModalPage = ({
   isOpen,
   onClose,
@@ -780,35 +750,11 @@ export default function App() {
     localStorage.setItem("@MeuCaixa:meta", String(metaDiaria));
   }, [metaDiaria]);
 
-  const [isAIOpen, setIsAIOpen] = useState(false);
-  const [configAI, setConfigAI] = useState<ConfiguracaoAI>(() => {
-    const saved = localStorage.getItem("@MeuCaixa:configAI");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return {
-      nivelDetalhe: "padrao",
-      focarEmGanhos: true,
-      focarEmGastos: true,
-      hapticosAtivos: true,
-      baseConhecimento: "",
-    };
-  });
-
-  const [insights, setInsights] = useState<AIInsight[]>([]);
-  const [abaConfig, setAbaConfig] = useState<"Interface" | "Dados" | "IA" | "Perfil">("Interface");
-  const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([]);
-  const [userInput, setUserInput] = useState("");
-  const [activeAIView, setActiveAIView] = useState<
-    "insights" | "chat" | "settings"
-  >("insights");
+  const [abaConfig, setAbaConfig] = useState<"Interface" | "Dados" | "Perfil">("Interface");
 
   // --- Funções de Feedback ---
   const vibrar = (ms: number | number[] = 10) => {
     if (
-      configAI.hapticosAtivos &&
       typeof navigator !== "undefined" &&
       navigator.vibrate
     ) {
@@ -816,131 +762,9 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    localStorage.setItem("@MeuCaixa:configAI", JSON.stringify(configAI));
-  }, [configAI]);
-
-  const scrollToBottom = (ref: React.RefObject<HTMLDivElement>) => {
-    if (ref.current) {
-      ref.current.scrollTo({
-        top: ref.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (activeAIView === "chat") {
-      scrollToBottom(chatContainerRef);
-    }
-  }, [chatMessages, activeAIView]);
-
-  const [isAIThinking, setIsAIThinking] = useState(false);
-
-  const handleSendToAI = async () => {
-    if (!userInput.trim()) return;
-
-    const userMessage: AIChatMessage = {
-      role: "user",
-      content: userInput,
-    };
-
-    setChatMessages((prev) => [...prev, userMessage]);
-    setIsAIThinking(true);
-    setUserInput("");
-
-    try {
-      const aiResponse = await responderChat(
-        userInput,
-        transacoes,
-        metaDiaria,
-        configAI,
-        userProfile,
-        chatMessages,
-      );
-      setChatMessages((prev) => [...prev, aiResponse]);
-      if (aiResponse.sentiment === "negativo") vibrar([40, 30, 40]);
-      else vibrar(20);
-    } catch (e) {
-      console.error(e);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Desculpe, meu cérebro está offline no momento. Tente novamente mais tarde.",
-          sentiment: "neutro",
-        },
-      ]);
-    } finally {
-      setIsAIThinking(false);
-    }
-  };
-
-  const SugestaoPergunta = ({ texto }: { texto: string }) => (
-    <button
-      onClick={() => {
-        vibrar(10);
-        setUserInput(texto);
-        // Pequeno delay para efeito visual
-        setTimeout(() => handleSendToAI(), 100);
-      }}
-      className="px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/30 rounded-full text-xs font-medium  tracking-widest text-primary-600 dark:text-primary-400 hover:bg-primary-100 transition-all shrink-0"
-    >
-      {texto}
-    </button>
-  );
-
-  useEffect(() => {
-    if (isAIOpen) {
-      const fetchInsights = async () => {
-        try {
-          const novosInsights = await gerarInsightsNativos(
-            transacoes,
-            metaDiaria,
-            CATEGORIAS_RECEITA,
-            CATEGORIAS_DESPESA,
-            configAI,
-            userProfile,
-          );
-          setInsights(novosInsights);
-          if (novosInsights.some((i) => i.tipo === "alerta")) vibrar([50, 50, 50]);
-        } catch (error) {
-          console.error("Erro ao gerar insights com IA:", error);
-        }
-      };
-      fetchInsights();
-    }
-  }, [isAIOpen, transacoes, metaDiaria, configAI, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA]);
-
   const toastRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLElement>(null);
-
-  const [testePersonalidade, setTestePersonalidade] = useState<string | null>(null);
-  const [isTestandoPersonalidade, setIsTestandoPersonalidade] = useState(false);
-
-  const testarPersonalidadeIA = async () => {
-    setIsTestandoPersonalidade(true);
-    vibrar(15);
-    try {
-      const msg = await responderChat(
-        `Como meu mentor financeiro e Cérebro AutoCaixa, analise rapidamente meu saldo de R$ ${transacoes.reduce((acc, t) => acc + (t.tipo === "receita" ? t.valor : -t.valor), 0).toFixed(2)} e as outras métricas. Me dê um conselho rápido, curto e visceral de até 2 frases que revele sua personalidade sábia de elite.`,
-        transacoes,
-        metaDiaria,
-        configAI,
-        userProfile,
-        []
-      );
-      setTestePersonalidade(msg.content);
-    } catch (e) {
-      setTestePersonalidade("Sistema temporariamente ocupado processando algoritmos de precisão.");
-    } finally {
-      setIsTestandoPersonalidade(false);
-    }
-  };
 
   useEffect(() => {
     if (mainRef.current) {
@@ -1586,7 +1410,7 @@ export default function App() {
           vibrar={vibrar}
         />
       ) : (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-300">
+        <div className="flex flex-col h-[100dvh] bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-300">
         <AnimatePresence>
           {toast && (
             <motion.div
@@ -1677,17 +1501,6 @@ export default function App() {
               </motion.div>
 
               <div className="flex items-center gap-1 sm:hidden shrink-0">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    vibrar(15);
-                    setIsAIOpen(true);
-                  }}
-                  className="p-1.5 flex items-center gap-1.5 transition-all bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 rounded-lg"
-                >
-                  <RainbowAIIcon size={18} />
-                </motion.button>
                 <button
                   onClick={() => {
                     vibrar(10);
@@ -1740,23 +1553,6 @@ export default function App() {
             </div>
 
             <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  vibrar(15);
-                  setIsAIOpen(true);
-                }}
-                className="px-3 py-1.5 flex items-center gap-1.5 transition-all bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 rounded-lg"
-              >
-                <RainbowAIIcon size={18} />
-                <span className="text-[11px] font-semibold tracking-wider text-gray-700 dark:text-gray-300">
-                  AI Assist
-                </span>
-              </motion.button>
-              
-              <div className="w-px h-3 bg-gray-200 dark:bg-gray-800 mx-1" />
-
               <button
                 onClick={() => {
                   vibrar(10);
@@ -3098,86 +2894,13 @@ export default function App() {
                              </div>
                           </div>
                        </div>
-
-                       <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/30 flex gap-3">
-                          <Info size={16} className="text-indigo-500 shrink-0 mt-0.5" />
-                          <p className="text-[10px] text-indigo-900/60 dark:text-indigo-300/60 leading-relaxed font-medium">
-                             Estas informações personalizam os <b>insights automáticos</b> e a <b>linguagem</b> do cérebro AutoCaixa. Atualize-as sempre que mudar seus planos.
-                          </p>
-                       </div>
                     </div>
-                  </motion.div>
-                )}
-
-                {abaConfig === "IA" && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                     <div className="relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                           <Activity size={80} className="text-white animate-pulse" />
-                        </div>
-                        <div className="bg-indigo-600 p-6 rounded-2xl text-white flex gap-4 items-center shadow-lg shadow-indigo-500/20 relative z-10">
-                           <RainbowAIIcon size={32} className="flex-shrink-0" />
-                           <div>
-                              <h3 className="text-sm font-black">Cérebro AutoCaixa v4.2</h3>
-                              <div className="flex items-center gap-2">
-                                 <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-ping" />
-                                 <p className="text-[10px] opacity-80 uppercase tracking-widest font-black">Núcleo Central Ativo</p>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-
-                     <div className="grid grid-cols-3 gap-2 px-1">
-                        {[
-                           { label: "Sinc", val: "Online", color: "text-green-500" },
-                           { label: "Latência", val: "14ms", color: "text-blue-500" },
-                           { label: "Precisão", val: "99.9%", color: "text-purple-500" }
-                        ].map(s => (
-                           <div key={s.label} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-2 rounded-xl text-center">
-                              <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">{s.label}</p>
-                              <p className={`text-[9px] font-bold ${s.color}`}>{s.val}</p>
-                           </div>
-                        ))}
-                     </div>
-
-                     <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/50">
-                        <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-2">Memória do Cérebro</h5>
-                        <textarea
-                          value={configAI.baseConhecimento || ""}
-                          onChange={(e) => setConfigAI({...configAI, baseConhecimento: e.target.value})}
-                          placeholder="Adicione fatos que o cérebro deve sempre saber sobre suas finanças ou rotina..."
-                          className="w-full h-24 bg-transparent text-[11px] text-gray-600 dark:text-gray-300 outline-none resize-none pb-2 custom-scrollbar"
-                        />
-                     </div>
-
-                     <div className="grid gap-2">
-                        {[
-                          { label: "Análise Ultra-Sábia", sub: "Insights estratégicos profundos", active: configAI.nivelDetalhe === 'detalhado', action: () => setConfigAI(prev => ({ ...prev, nivelDetalhe: prev.nivelDetalhe === 'detalhado' ? 'resumido' : 'detalhado' })) },
-                          { label: "Busca Global", sub: "Consultar internet em tempo real", active: true, action: () => {} },
-                          { label: "Modo Autônomo", sub: "Sugestões proativas do cérebro", active: configAI.dicasProativas, action: () => setConfigAI(prev => ({ ...prev, dicasProativas: !prev.dicasProativas })) }
-                        ].map((opt) => (
-                          <button 
-                            key={opt.label}
-                            onClick={opt.action}
-                            className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800"
-                          >
-                            <div className="text-left">
-                               <p className="text-[11px] font-bold">{opt.label}</p>
-                               <p className="text-[8px] text-gray-400 font-medium">{opt.sub}</p>
-                            </div>
-                            <div className={`w-10 h-5 rounded-full relative transition-colors ${opt.active ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
-                               <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${opt.active ? 'left-5.5' : 'left-0.5'}`} />
-                            </div>
-                          </button>
-                        ))}
-                     </div>
                   </motion.div>
                 )}
               </div>
 
               <div className="mt-8 text-center pb-4 border-t border-gray-100 dark:border-gray-800 pt-6">
                  <div className="inline-flex items-center gap-2 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 rounded-full border border-gray-100 dark:border-gray-800">
-                    <RainbowAIIcon size={14} className="text-primary-500" />
                     <span className="text-[10px] font-black text-gray-900 dark:text-white tracking-widest uppercase">AutoCaixa v4.0</span>
                  </div>
               </div>
@@ -3192,259 +2915,6 @@ export default function App() {
                 if (file) importarDados(file);
               }}
             />
-          </ModalPage>
-        </AnimatePresence>
-
-        <AnimatePresence>
-          <ModalPage
-            key="modal-ai"
-            isOpen={isAIOpen}
-            onClose={() => setIsAIOpen(false)}
-            title="Cérebro AutoCaixa"
-            subtitle="Inteligência Autônoma e Sábia"
-            icon={RainbowAIIcon}
-            primaryColor="text-indigo-600"
-          >
-            <div className="flex flex-col h-[80vh] overflow-hidden">
-              <div className="flex justify-center gap-6 border-b border-gray-100 dark:border-gray-800/50 pb-4 mb-6">
-                 {["insights", "chat", "settings"].map((view) => (
-                    <button
-                      key={view}
-                      onClick={() => setActiveAIView(view as any)}
-                      className={`px-1 py-1 text-[11px] font-black uppercase tracking-[0.2em] transition-all relative ${activeAIView === view ? "text-primary-600 dark:text-primary-400" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
-                    >
-                      {view === 'settings' ? <Settings size={14} /> : view}
-                      {activeAIView === view && (
-                        <motion.div layoutId="activeAI" className="absolute -bottom-4 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full" />
-                      )}
-                    </button>
-                 ))}
-              </div>
-              
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1" ref={chatContainerRef}>
-                  {activeAIView === "insights" ? (
-                    <div className="space-y-6 pb-6">
-                      <div className="py-5 border-b border-gray-50 dark:border-gray-800/30 relative overflow-hidden group">
-                        <div className="flex items-center gap-3 mb-3">
-                           <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center">
-                              <Zap size={20} strokeWidth={2.5} />
-                           </div>
-                           <h4 className="text-sm font-black tracking-tight">Análise Holística</h4>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed italic pl-12">
-                          "Sincronização completa ativa. Processando padrões de produtividade."
-                        </p>
-                      </div>
-                      
-                      <div className="divide-y divide-gray-50 dark:divide-gray-800/30">
-                        {insights.map((insight, idx) => (
-                          <div
-                            key={`ai-insight-${idx}`}
-                            className="py-5 flex items-start gap-4 group"
-                          >
-                             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
-                               insight.tipo === "alerta" ? "bg-red-50 dark:bg-red-900/20 text-red-500" : 
-                               insight.tipo === "sucesso" ? "bg-green-50 dark:bg-green-900/20 text-green-500" : 
-                               "bg-gray-50 dark:bg-gray-800 text-primary-500"
-                             }`}>
-                                {insight.tipo === "alerta" ? <AlertTriangle size={18} /> : <Zap size={18} />}
-                             </div>
-                             <div className="flex-1">
-                                <h5 className="text-sm font-bold text-gray-900 dark:text-white mb-1 tracking-tight">{insight.titulo}</h5>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{insight.mensagem}</p>
-                             </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={async () => {
-                          mostrarToast("Sincronizando...");
-                          try {
-                            const novos = await gerarInsightsNativos(transacoes, metaDiaria, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA, configAI, userProfile);
-                            setInsights(novos);
-                          } catch (e) { console.error(e); }
-                        }}
-                        className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary-500/20 active:scale-[0.98] transition-all"
-                      >
-                        Recalcular Insights
-                      </button>
-                    </div>
-                  ) : activeAIView === "chat" ? (
-                    <div className="space-y-6 pb-6">
-                       {chatMessages.length === 0 ? (
-                         <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                            <div className="w-20 h-20 bg-primary-50 dark:bg-primary-900/10 rounded-[2rem] flex items-center justify-center mb-6">
-                              <RainbowAIIcon size={40} className="text-primary-500 opacity-60" />
-                            </div>
-                            <h4 className="text-lg font-black tracking-tight mb-2 italic">Como posso ajudar hoje?</h4>
-                            <p className="text-xs text-gray-400 font-medium leading-relaxed uppercase tracking-wider">Pergunte sobre seus gastos, economias ou peça dicas personalizadas.</p>
-                         </div>
-                       ) : (
-                         <div className="space-y-6">
-                           {chatMessages.map((m, i) => (
-                             <div key={`chat-msg-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                               <div className={`max-w-[85%] p-4 rounded-3xl text-[13px] font-medium leading-relaxed ${m.role === "user" ? "bg-primary-600 text-white rounded-tr-none shadow-xl shadow-primary-500/20" : "bg-gray-50 dark:bg-white/[0.03] text-gray-800 dark:text-gray-200 rounded-tl-none"}`}>
-                                 <Markdown>{m.content}</Markdown>
-                               </div>
-                             </div>
-                           ))}
-                         </div>
-                       )}
-                       {isAIThinking && (
-                          <div className="flex justify-start">
-                            <div className="bg-gray-50 dark:bg-white/[0.03] p-4 rounded-2xl rounded-tl-none flex gap-1.5 items-center">
-                               <span className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" />
-                               <span className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s'}} />
-                               <span className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s'}} />
-                            </div>
-                          </div>
-                       )}
-                    </div>
-                  ) : (
-                    <div className="py-4 space-y-8">
-                       <div>
-                          <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 px-1">Configurações da Inteligência</h4>
-                          <div className="divide-y divide-gray-50 dark:divide-gray-800/30">
-                            <div className="py-5 flex items-center justify-between px-1">
-                               <div>
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight transition-colors">Focar em Ganhos</span>
-                                  <span className="text-xs text-gray-400 font-medium">Prioriza estratégias de faturamento</span>
-                               </div>
-                               <button 
-                                 onClick={() => setConfigAI({...configAI, focarEmGanhos: !configAI.focarEmGanhos})} 
-                                 className={`w-11 h-6 rounded-full p-1 transition-all duration-300 ${configAI.focarEmGanhos ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-800'}`}
-                               >
-                                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${configAI.focarEmGanhos ? 'translate-x-5' : 'translate-x-0'}`} />
-                               </button>
-                            </div>
-
-                             <div className="py-6">
-                               <div className="flex items-center gap-2 mb-4">
-                                 <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center">
-                                   <ArrowUpRight size={16} />
-                                 </div>
-                                 <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Base de Conhecimento Própria</h5>
-                               </div>
-                               <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 px-1 leading-relaxed">
-                                 Adicione informações que o cérebro deve SEMPRE lembrar (ex: gastos fixos ocultos, metas de vida, estratégias locais).
-                               </p>
-                               <textarea
-                                 value={configAI.baseConhecimento || ""}
-                                 onChange={(e) => setConfigAI({...configAI, baseConhecimento: e.target.value})}
-                                 placeholder="Ex: Meu carro faz 10km/l. Evito trabalhar após as 22h. Meta de lucro real é 50%..."
-                                 className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-400 outline-none focus:ring-2 ring-indigo-500/20 resize-none transition-all"
-                               />
-                             </div>
-
-                             <div className="py-5 flex items-center justify-between px-1">
-                               <div>
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Cérebro Autônomo</span>
-                                  <span className="text-xs text-gray-400 font-medium">Análise preditiva e proativa (Ativo)</span>
-                               </div>
-                               <div className="w-11 h-6 rounded-full bg-indigo-600 p-1">
-                                  <div className="w-4 h-4 bg-white rounded-full translate-x-5" />
-                               </div>
-                            </div>
-
-                            <div className="py-5 flex items-center justify-between px-1 border-b border-gray-50 dark:border-gray-800/30">
-                               <div>
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Rede Mundial Ativa</span>
-                                  <span className="text-xs text-gray-400 font-medium">Consulta global em tempo real</span>
-                               </div>
-                               <div className="flex items-center gap-2">
-                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                  <span className="text-[9px] font-bold text-green-500 uppercase tracking-widest">Conectado</span>
-                               </div>
-                            </div>
-
-                            <div className="py-8 space-y-4">
-                                <div className="flex items-center justify-between px-1 pt-2">
-                                   <div className="space-y-1">
-                                      <h4 className="text-[10px] font-black text-primary-500 uppercase tracking-[0.2em]">Interação em Tempo Real</h4>
-                                      <p className="text-[9px] text-gray-400 font-medium">Teste a personalidade do Cérebro agora.</p>
-                                   </div>
-                                   <button 
-                                      onClick={testarPersonalidadeIA}
-                                      disabled={isTestandoPersonalidade}
-                                      className="p-3 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                                   >
-                                      <Zap size={20} className={isTestandoPersonalidade ? "animate-pulse" : ""} />
-                                   </button>
-                                </div>
-
-                                {testePersonalidade && (
-                                   <motion.div 
-                                      initial={{ opacity: 0, scale: 0.95 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      className="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 relative group"
-                                   >
-                                      <div className="absolute -top-2 left-4 px-2 bg-primary-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg">Resposta Instantânea</div>
-                                      <p className="text-xs text-gray-600 dark:text-gray-300 italic font-medium leading-relaxed">
-                                         "{testePersonalidade}"
-                                      </p>
-                                   </motion.div>
-                                )}
-
-                                <div className="p-5 bg-gradient-to-br from-indigo-500/5 to-primary-500/5 rounded-3xl border border-gray-100/50 dark:border-gray-800/50 overflow-hidden relative">
-                                   <div className="flex items-center gap-3 mb-4">
-                                      <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center">
-                                         <Activity size={14} className="text-primary-500 animate-[pulse_2s_infinite]" />
-                                      </div>
-                                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Status dos Núcleos</span>
-                                   </div>
-                                   <div className="grid grid-cols-2 gap-3">
-                                      <div className="space-y-1">
-                                         <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                            <motion.div 
-                                               animate={{ width: ["10%", "90%", "60%", "100%"] }} 
-                                               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                                               className="h-full bg-primary-500" 
-                                            />
-                                         </div>
-                                         <span className="text-[8px] font-black uppercase tracking-tighter text-gray-400">Analítico</span>
-                                      </div>
-                                      <div className="space-y-1">
-                                         <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                            <motion.div 
-                                               animate={{ width: ["90%", "20%", "70%", "85%"] }} 
-                                               transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-                                               className="h-full bg-indigo-500" 
-                                            />
-                                         </div>
-                                         <span className="text-[8px] font-black uppercase tracking-tighter text-gray-400">Preditivo</span>
-                                      </div>
-                                   </div>
-                                </div>
-                             </div>
-                          </div>
-                       </div>
-                    </div>
-                  )}
-              </div>
-
-              {activeAIView === "chat" && (
-                <div className="p-4 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-900">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={userInput}
-                      onChange={(e) => setUserInput(e.target.value)}
-                      placeholder="Consulte a Sabedoria do Cérebro..."
-                      className="flex-1 h-12 px-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 ring-indigo-500/20"
-                      onKeyPress={(e) => e.key === "Enter" && handleSendToAI()}
-                    />
-                    <button
-                      onClick={handleSendToAI}
-                      disabled={isAIThinking}
-                      className="w-12 h-12 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-600/20 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
-                    >
-                      <Plus className="rotate-45" size={20} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </ModalPage>
         </AnimatePresence>
       </div>
@@ -3558,8 +3028,8 @@ function FormularioLancamento({
   };
 
   return (
-    <div className="h-full flex flex-col pb-4 max-w-sm mx-auto">
-      <div className="flex bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl mb-4 shadow-inner">
+    <div className="min-h-full flex flex-col pb-12 max-w-sm mx-auto">
+      <div className="flex bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl mb-4 shadow-inner shrink-0">
         <button
           onClick={() => setTipo("receita")}
           className={`flex-1 py-3 text-xs font-semibold tracking-wider rounded-xl transition-all duration-300 ${tipo === "receita" ? "bg-white dark:bg-gray-700 text-green-600 shadow-sm" : "text-gray-500"}`}
@@ -3750,7 +3220,7 @@ function FormularioLancamento({
           vibrar(25);
           handleSalvar();
         }}
-        className={`w-full py-3 text-white rounded-xl font-semibold tracking-wide text-sm transition-all flex items-center justify-center gap-2 mt-auto ${!valor || !cat ? "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed" : "bg-primary-600 shadow-lg shadow-primary-600/30 hover:bg-primary-700"}`}
+        className={`w-full py-3 text-white rounded-xl font-semibold tracking-wide text-sm transition-all flex items-center justify-center gap-2 mt-8 ${!valor || !cat ? "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed" : "bg-primary-600 shadow-lg shadow-primary-600/30 hover:bg-primary-700"}`}
       >
         {edicao ? (
           <Pencil size={18} strokeWidth={2.5} />
