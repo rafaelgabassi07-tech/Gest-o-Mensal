@@ -12,9 +12,9 @@ async function startServer() {
   app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
   // Search API (Scraper)
-  app.post("/api/search", async (req, res) => {
+  app.get("/api/search", async (req, res) => {
     try {
-      const { query } = req.body;
+      const query = req.query.q as string;
       if (!query) {
         return res.status(400).json({ error: "Query is required" });
       }

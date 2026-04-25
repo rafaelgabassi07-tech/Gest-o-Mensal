@@ -55,10 +55,9 @@ export async function responderChat(
   try {
     let searchResults = "Nenhum resultado encontrado para a sua busca.";
     try {
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: mensagem })
+      const res = await fetch(`/api/search?q=${encodeURIComponent(mensagem)}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
       });
       const textResponse = await res.text();
       if (!res.ok) {
