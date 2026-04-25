@@ -60,7 +60,11 @@ export async function responderChat(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: mensagem })
       });
-      const data = await res.json();
+      const textResponse = await res.text();
+      if (!res.ok) {
+        throw new Error(`HTTP Error ${res.status}: ${textResponse}`);
+      }
+      const data = JSON.parse(textResponse);
       
       if (data.results && data.results.length > 0) {
         searchResults = "Aqui estão os resultados que encontrei na web:\n\n" + data.results.map((r: any) => `* **${r.title}**: ${r.snippet}\n(${r.link})`).join("\n\n");

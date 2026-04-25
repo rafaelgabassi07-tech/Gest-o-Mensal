@@ -9,6 +9,8 @@ async function startServer() {
 
   app.use(express.json());
 
+  app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
   // Search API (Scraper)
   app.post("/api/search", async (req, res) => {
     try {
