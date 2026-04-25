@@ -1,16 +1,16 @@
-import { GoogleGenAI } from "@google/genai";
+const { GoogleGenAI } = require("@google/genai");
 async function run() {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: "Olá",
       config: {
         tools: [{ googleSearch: {} }]
       }
     });
-    console.log(response.text);
-  } catch(e: any) {
+    console.log("SUCCESS =>", response.text);
+  } catch(e) {
     console.log("ERROR ==>", e.message);
   }
 }

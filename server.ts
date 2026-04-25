@@ -97,7 +97,17 @@ REGRAS:
         systemInstruction,
         temperature: 0.7,
         tools: [{
-          googleSearch: {}
+          functionDeclarations: [{
+            name: "buscarNaInternet",
+            description: "Busca informações atualizadas na internet. Ex: 'Preço da gasolina hoje', 'Notícias', ou qualquer assunto para manter a conversa.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                query: { type: "STRING", description: "A consulta da busca no DuckDuckGo." }
+              },
+              required: ["query"]
+            }
+          }]
         }],
       };
 
@@ -106,6 +116,55 @@ REGRAS:
         contents,
         config: configGenAI as any
       });
+
+      if (response.functionCalls && response.functionCalls.length > 0) {
+        const call = response.functionCalls[0];
+        if (call.name === "buscarNaInternet") {
+          const query = (call.args as any).query;
+          let searchResultsStr = "Nenhum resultado encontrado.";
+          try {
+            // Buscando no DuckDuckGo
+            const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+            const searchResponse = await fetch(url, {
+              headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" }
+            });
+            const html = await searchResponse.text();
+            
+            const $ = cheerio.load(html);
+            const results: any[] = [];
+            $(".result").each((i: number, el: any) => {
+              if (i >= 5) return;
+              const title = $(el).find(".result__title").text().trim();
+              const snippet = $(el).find(".result__snippet").text().trim();
+              if (title && snippet) results.push({ title, snippet });
+            });
+            if (results.length > 0) {
+              searchResultsStr = JSON.stringify(results);
+            }
+          } catch (e: any) {
+            searchResultsStr = "Erro de rede ao buscar: " + e.message;
+          }
+
+          // Add function call and response back to context
+          contents.push({ role: "model", parts: [{ functionCall: call as any }] });
+          contents.push({
+            role: "user",
+            parts: [{
+              functionResponse: {
+                name: "buscarNaInternet",
+                response: { result: searchResultsStr }
+              }
+            }]
+          });
+
+          // Request final text
+          response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents,
+            config: configGenAI as any
+          });
+        }
+      }
 
       res.json({ content: response.text || "Sem resposta." });
     } catch (e: any) {
