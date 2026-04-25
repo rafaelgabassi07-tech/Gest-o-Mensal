@@ -2,6 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import * as cheerio from "cheerio";
 import path from "path";
+import "dotenv/config";
 
 async function startServer() {
   const app = express();
@@ -56,8 +57,8 @@ async function startServer() {
       const { historico, mensagem, profile, saldoTotal, ganhosHoje, gastosHoje, metaDiaria, config } = req.body;
       
       const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "Chave API do Gemini não configurada no servidor." });
+      if (!apiKey || apiKey.startsWith("MY_")) {
+        return res.status(500).json({ error: "Chave API do Gemini não configurada ou inválida no servidor." });
       }
       
       // Dynamic import to avoid issues in typical Express setup if needed, but we can just use require or import.
@@ -110,7 +111,7 @@ REGRAS:
       };
 
       let response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents,
         config: configGenAI as any
       });
@@ -122,7 +123,7 @@ REGRAS:
           let searchResultsStr = "Nenhum resultado encontrado.";
           try {
             // Buscando no DuckDuckGo
-            const url = \`https://html.duckduckgo.com/html/?q=\${encodeURIComponent(query)}\`;
+            const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
             const searchResponse = await fetch(url, {
               headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" }
             });
@@ -156,7 +157,7 @@ REGRAS:
 
           // Request final text
           response = await ai.models.generateContent({
-            model: "gemini-3.1-pro-preview",
+            model: "gemini-3-flash-preview",
             contents,
             config: configGenAI as any
           });

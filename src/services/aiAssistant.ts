@@ -67,7 +67,21 @@ export async function responderChat(
     
     if (!rs.ok) {
         const txt = await rs.text();
-        throw new Error(`Erro API: ${rs.status} - ${txt}`);
+        let errorMsg = txt;
+        try {
+          const json = JSON.parse(txt);
+          if (json.error) {
+             const nested = JSON.parse(json.error);
+             if (nested.error && nested.error.message) errorMsg = nested.error.message;
+          }
+        } catch(e) {
+          try {
+             // For cases like {"error": "Chave API do Gemini não configurada..."}
+             const json = JSON.parse(txt);
+             if (json.error) errorMsg = json.error;
+          } catch(e2) {}
+        }
+        throw new Error(`Erro API: ${errorMsg}`);
     }
 
     const data = await rs.json();
@@ -80,9 +94,25 @@ export async function responderChat(
     };
   } catch (error: any) {
     console.error("Erro no chat:", error);
+    const msgFallback = error?.message || String(error);
+    if (msgFallback.includes("Chave API do Gemini")) {
+      return {
+        role: "assistant",
+        content: `⚠️ Parei! A sua chave do Gemini configurada nos Secrets está inválida! Vá em "Settings", remova a "GEMINI_API_KEY" para usar a inteligência nativa, ou insira uma chave verdadeira e reinicie o app.`,
+        sentiment: "neutro"
+      };
+    }
+    if (msgFallback.includes("API key not valid")) {
+      return {
+        role: "assistant",
+        content: `⚠️ Chave Inválida! A chave da API do Gemini que você colocou nos Secrets não funciona. Remova a chave GEMINI_API_KEY em Settings e use a inteligência padrão do sistema.`,
+        sentiment: "neutro"
+      };
+    }
+
     return {
       role: "assistant",
-      content: `Deu ruim na conexão aqui. Tenta mandar novamente em uns segundos. Detalhe: ${error?.message || error}`,
+      content: `Deu ruim na conexão aqui. Tenta mandar novamente em uns segundos. Detalhe: ${msgFallback}`,
       sentiment: "neutro"
     };
   }
