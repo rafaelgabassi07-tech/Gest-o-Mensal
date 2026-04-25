@@ -1789,22 +1789,6 @@ export default function App() {
             animate={{ x: `-${["resumo", "adicionar", "historico"].indexOf(tabAtual) * 33.333333}%` }}
             transition={{ type: "spring", stiffness: 260, damping: 28, mass: 0.5 }}
             style={{ width: '300%' }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.4}
-            dragDirectionLock
-            onDragEnd={(_, info) => {
-              if (Math.abs(info.offset.y) > Math.abs(info.offset.x)) return;
-              
-              const threshold = 100;
-              const tabs: ("resumo" | "adicionar" | "historico")[] = ["resumo", "adicionar", "historico"];
-              const currentIndex = tabs.indexOf(tabAtual);
-              if (info.offset.x < -threshold && currentIndex < tabs.length - 1) {
-                setTabAtual(tabs[currentIndex + 1]);
-              } else if (info.offset.x > threshold && currentIndex > 0) {
-                setTabAtual(tabs[currentIndex - 1]);
-              }
-            }}
           >
               <div className="w-1/3 h-full overflow-y-auto pb-40 overflow-x-hidden scroll-smooth p-4 space-y-4">
                   {/* Card Principal: Balanço de Lucro Real */}
