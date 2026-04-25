@@ -3185,21 +3185,21 @@ function FormularioLancamento({
       <div className="flex p-1 rounded-xl mb-2 shrink-0 bg-transparent flex-row justify-center space-x-4">
         <button
           onClick={() => { setTipo("receita"); vibrar(10); }}
-          className={`px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "receita" ? "border-green-500 text-green-600" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "receita" ? "border-green-500 text-green-600" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
         >
           Entrada
         </button>
         <button
           onClick={() => { setTipo("despesa"); vibrar(10); }}
-          className={`px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "despesa" ? "border-red-500 text-red-500" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "despesa" ? "border-red-500 text-red-500" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
         >
           Saída
         </button>
       </div>
 
-      <div className="mb-6 mt-4 flex flex-col items-center">
-        <div className="flex items-center justify-center w-full mb-3">
-          <span className={`text-3xl font-light mr-1.5 transition-colors display-font ${tipo === "receita" ? "text-green-500/50" : "text-red-500/50"}`}>
+      <div className="mb-4 mt-2 flex flex-col items-center">
+        <div className="flex items-center justify-center w-full mb-2">
+          <span className={`text-xl font-light mr-1.5 transition-colors display-font ${tipo === "receita" ? "text-green-500/50" : "text-red-500/50"}`}>
             R$
           </span>
           <input
@@ -3208,7 +3208,7 @@ function FormularioLancamento({
             value={valor}
             onChange={(e) => setValor(formatCurrencyEntry(e.target.value))}
             placeholder="0,00"
-            className={`text-5xl font-black bg-transparent outline-none text-center transition-all tracking-tighter display-font placeholder:opacity-30 ${tipo === "receita" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} max-w-[220px]`}
+            className={`text-3xl font-black bg-transparent outline-none text-center transition-all tracking-tighter display-font placeholder:opacity-30 ${tipo === "receita" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} max-w-[140px]`}
           />
         </div>
 
