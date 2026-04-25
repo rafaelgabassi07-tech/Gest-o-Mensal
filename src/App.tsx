@@ -1004,12 +1004,14 @@ export default function App() {
                   setTabAtual("resumo");
                 }}
               >
-                <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-black transition-all shrink-0">
-                  <Wallet size={16} strokeWidth={2} />
+                <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-sm shadow-primary-500/30 flex items-center justify-center text-white shrink-0 overflow-hidden">
+                  <div className="absolute inset-0 bg-white/20 transform -translate-x-full hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                  <Wallet size={16} strokeWidth={2.5} className="sm:hidden" />
+                  <Wallet size={18} strokeWidth={2.5} className="hidden sm:block" />
                 </div>
-                <div className="min-w-0 flex items-baseline gap-1.5">
-                  <h1 className="text-lg font-semibold tracking-tight leading-none dark:text-white display-font shrink-0">
-                    Meu<span className="text-primary-500">Caixa</span>
+                <div className="min-w-0 flex items-baseline gap-0.5">
+                  <h1 className="text-xl sm:text-2xl font-extrabold tracking-tighter leading-none text-gray-900 dark:text-white display-font shrink-0">
+                    Meu<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
                   </h1>
                 </div>
               </motion.div>
@@ -2518,13 +2520,18 @@ export default function App() {
                     </div>
 
                     <div className="flex items-end justify-between">
-                      <div>
-                        <h2 className="text-2xl font-semibold tracking-tighter mb-1 leading-none italic">
-                          MeuCaixa
-                        </h2>
-                        <p className="text-[11px] font-medium text-primary-200  tracking-widest">
-                          Sua inteligência financeira offline
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm shadow-blue-500/20 flex items-center justify-center shrink-0">
+                          <Wallet size={20} strokeWidth={2.5} className="text-primary-600" />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-extrabold tracking-tighter mb-0.5 leading-none">
+                            Meu<span className="text-primary-200">Caixa</span>
+                          </h2>
+                          <p className="text-[10px] font-medium text-primary-200 tracking-widest uppercase">
+                            Consultoria Financeira
+                          </p>
+                        </div>
                       </div>
 
                       <div className="flex bg-white/10 backdrop-blur-xl p-1 rounded-xl border border-white/10">
