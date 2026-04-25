@@ -9,6 +9,8 @@ export interface Transacao {
   valor: number;
   data: string;
   descricao: string;
+  custoFixo?: boolean;
+  tags?: string[];
 }
 
 export interface Categoria {
@@ -27,11 +29,9 @@ export interface SemanaAgrupada {
 }
 
 export type NivelDetalheAI = "resumido" | "padrao" | "detalhado";
-export type TomVozAI = "formal" | "amigavel" | "direto";
 
 export interface ConfiguracaoAI {
   nivelDetalhe: NivelDetalheAI;
-  tomVoz: TomVozAI;
   focarEmGanhos: boolean;
   focarEmGastos: boolean;
   hapticosAtivos: boolean;

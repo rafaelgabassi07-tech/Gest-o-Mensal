@@ -2,6 +2,30 @@
 @import "tailwindcss";
 
 @theme {
+  --color-primary-50: var(--primary-50, #eff6ff);
+  --color-primary-100: var(--primary-100, #dbeafe);
+  --color-primary-200: var(--primary-200, #bfdbfe);
+  --color-primary-300: var(--primary-300, #93c5fd);
+  --color-primary-400: var(--primary-400, #60a5fa);
+  --color-primary-500: var(--primary-500, #3b82f6);
+  --color-primary-600: var(--primary-600, #2563eb);
+  --color-primary-700: var(--primary-700, #1d4ed8);
+  --color-primary-800: var(--primary-800, #1e40af);
+  --color-primary-900: var(--primary-900, #1e3a8a);
+  --color-primary-950: var(--primary-950, #172554);
+
+  --color-blue-50: var(--primary-50, #eff6ff);
+  --color-blue-100: var(--primary-100, #dbeafe);
+  --color-blue-200: var(--primary-200, #bfdbfe);
+  --color-blue-300: var(--primary-300, #93c5fd);
+  --color-blue-400: var(--primary-400, #60a5fa);
+  --color-blue-500: var(--primary-500, #3b82f6);
+  --color-blue-600: var(--primary-600, #2563eb);
+  --color-blue-700: var(--primary-700, #1d4ed8);
+  --color-blue-800: var(--primary-800, #1e40af);
+  --color-blue-900: var(--primary-900, #1e3a8a);
+  --color-blue-950: var(--primary-950, #172554);
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
@@ -26,7 +50,7 @@
 
 @layer base {
   body {
-    @apply antialiased selection:bg-blue-100 selection:text-blue-900;
+    @apply antialiased selection:bg-primary-100 selection:text-primary-900;
     -webkit-tap-highlight-color: transparent;
   }
 

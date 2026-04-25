@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Markdown from "react-markdown";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { GoogleGenAI, Type } from "@google/genai";
 import {
   gerarInsightsNativos,
   AIInsight,
@@ -71,6 +74,8 @@ import {
   GraduationCap,
   FileText,
   Droplet,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -95,7 +100,6 @@ import {
   SemanaAgrupada,
   ConfiguracaoAI,
   NivelDetalheAI,
-  TomVozAI,
 } from "./types";
 
 // --- Utils ---
@@ -110,15 +114,31 @@ const getLocalISODate = (date?: Date | string | number): string => {
   }
 };
 
+const numberFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
 const formatarMoeda = (valor: number): string => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(valor || 0);
+  return numberFormatter.format(valor || 0);
 };
 
 const formatarDataBR = (dataStr: string): string => {
+  if (!dataStr || !dataStr.includes("-")) return dataStr;
+  
+  const hoje = getLocalISODate();
+  if (dataStr === hoje) return "Hoje";
+  
+  const h = new Date(hoje + "T12:00:00");
+  h.setDate(h.getDate() - 1);
+  const ontem = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}-${String(h.getDate()).padStart(2, "0")}`;
+  
+  if (dataStr === ontem) return "Ontem";
+  
   const [ano, mes, dia] = dataStr.split("-");
+  if (h.getFullYear() === Number(ano)) {
+    return `${dia}/${mes}`;
+  }
   return `${dia}/${mes}/${ano}`;
 };
 
@@ -138,6 +158,8 @@ const higienizarTransacao = (t: any): Transacao => ({
       ? t.data
       : getLocalISODate(),
   descricao: String(t?.descricao || "").substring(0, 100),
+  custoFixo: Boolean(t?.custoFixo),
+  tags: Array.isArray(t?.tags) ? t.tags.map(String) : [],
 });
 
 // --- Config ---
@@ -147,7 +169,6 @@ const CATEGORIAS_LEGADO: Record<string, any> = {
   indrive: Car,
   shopee: Package,
   particular: Smartphone,
-  reembolso: ReceiptText,
   combustivel: Fuel,
   manutencao: Wrench,
   lavagem: Droplets,
@@ -192,11 +213,12 @@ const getNomeCategoria = (t: Transacao) => {
 };
 
 const CATEGORIAS_RECEITA: Categoria[] = [
+  { id: "uber", nome: "Uber", icone: Car },
+  { id: "99", nome: "99App", icone: Car },
+  { id: "indrive", nome: "InDrive", icone: Car },
+  { id: "particular", nome: "Particular", icone: Smartphone },
+  { id: "entrega", nome: "Entrega", icone: Package },
   { id: "salario", nome: "Salário", icone: Briefcase },
-  { id: "freelance", nome: "Freelance", icone: Smartphone },
-  { id: "rendimentos", nome: "Rendimentos", icone: TrendingUp },
-  { id: "vendas", nome: "Vendas", icone: ShoppingBag },
-  { id: "presente", nome: "Presente", icone: Gift },
   { id: "outros", nome: "Outros", icone: MoreHorizontal },
 ];
 
@@ -278,6 +300,26 @@ const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
 };
 
 // --- App Component ---
+const RainbowAIIcon = ({ size = 16, className = "" }: { size?: number; className?: string }) => {
+  return (
+  <div className={`relative inline-flex items-center justify-center group ${className}`} style={{ width: size, height: size }}>
+    <span 
+      className="font-black italic tracking-tighter bg-gradient-to-r from-red-500 via-orange-500 via-yellow-500 via-green-500 via-primary-500 via-indigo-500 via-purple-500 to-red-500 bg-clip-text text-transparent animate-rainbow-move pointer-events-none select-none z-10 relative drop-shadow-sm flex items-center justify-center"
+      style={{ fontSize: `${size * 0.8}px`, lineHeight: 1 }}
+    >
+      IA
+    </span>
+    <div 
+      className="absolute inset-0 blur-[8px] opacity-50 animate-rainbow-move group-hover:opacity-80 transition-opacity"
+      style={{
+        background: 'linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #6366f1, #a855f7, #ef4444)',
+        borderRadius: '50%',
+        backgroundSize: '200% 100%'
+      }}
+    />
+  </div>
+)};
+
 export default function App() {
   const [tabAtual, setTabAtual] = useState<
     "resumo" | "adicionar" | "historico"
@@ -285,6 +327,9 @@ export default function App() {
   const [direcao, setDirecao] = useState(0);
   const [transacoes, setTransacoes] = useState<Transacao[]>(() =>
     getInitialData(),
+  );
+  const [corTema, setCorTema] = useState<"blue" | "purple" | "green" | "orange">(
+    () => (localStorage.getItem("@MeuCaixa:corTema") as any) || "blue"
   );
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
@@ -341,7 +386,6 @@ export default function App() {
     }
     return {
       nivelDetalhe: "padrao",
-      tomVoz: "amigavel",
       focarEmGanhos: true,
       focarEmGastos: true,
       hapticosAtivos: true,
@@ -436,7 +480,7 @@ export default function App() {
         // Pequeno delay para efeito visual
         setTimeout(() => handleSendToAI(), 100);
       }}
-      className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-full text-xs font-medium  tracking-widest text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all shrink-0"
+      className="px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/30 rounded-full text-xs font-medium  tracking-widest text-primary-600 dark:text-primary-400 hover:bg-primary-100 transition-all shrink-0"
     >
       {texto}
     </button>
@@ -468,12 +512,13 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem("@MeuCaixa:theme", isDarkMode ? "dark" : "light");
+    localStorage.setItem("@MeuCaixa:corTema", corTema);
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }, [isDarkMode]);
+  }, [isDarkMode, corTema]);
 
   useEffect(() => {
     localStorage.setItem("@MeuCaixa:transacoes", JSON.stringify(transacoes));
@@ -503,26 +548,116 @@ export default function App() {
     setTabAtual("resumo");
   };
 
+  const gerarRelatorioPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const hoje = new Date();
+      const dataStr = hoje.toLocaleDateString('pt-BR');
+      
+      doc.setFontSize(20);
+      doc.setTextColor(59, 130, 246); // Blue-500
+      doc.text("MeuCaixa", 14, 22);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100);
+      doc.text(`Relatório Financeiro Gerencial - ${dataStr}`, 14, 30);
+      
+      const receitasTotal = transacoes.filter(t => t.tipo === "receita").reduce((acc, t) => acc + t.valor, 0);
+      const despesasTotal = transacoes.filter(t => t.tipo === "despesa").reduce((acc, t) => acc + t.valor, 0);
+      const saldo = receitasTotal - despesasTotal;
+
+      doc.setFontSize(14);
+      doc.setTextColor(20);
+      doc.text("Resumo do Período", 14, 45);
+      
+      doc.setFontSize(10);
+      doc.text(`Total Entradas: R$ ${receitasTotal.toFixed(2)}`, 14, 55);
+      doc.text(`Total Saídas: R$ ${despesasTotal.toFixed(2)}`, 14, 62);
+      doc.text(`Lucro Líquido: R$ ${saldo.toFixed(2)}`, 14, 69);
+
+      // Table of expenses
+      const expenses = transacoes.filter(t => t.tipo === "despesa");
+      const catsMap = expenses.reduce((acc, current) => {
+        const catName = CATEGORIAS_DESPESA.find(c => c.id === current.categoria)?.nome || current.categoria;
+        acc[catName] = (acc[catName] || 0) + current.valor;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const tableData = Object.entries(catsMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, val]) => [cat, `R$ ${val.toFixed(2)}`]);
+
+      if (tableData.length > 0) {
+        doc.setFontSize(14);
+        doc.text("Resumo de Gastos", 14, 85);
+        autoTable(doc, {
+          startY: 90,
+          head: [['Categoria', 'Valor Total']],
+          body: tableData,
+          theme: 'grid',
+          headStyles: { fillColor: [59, 130, 246] }
+        });
+      }
+
+      const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY : 85;
+      
+      // Auto-IA Veredito (Simple based on margin)
+      doc.setFontSize(14);
+      doc.setTextColor(20);
+      doc.text("Veredito IA", 14, finalY + 15);
+      
+      let margem = 0;
+      if (receitasTotal > 0) {
+        margem = (saldo / receitasTotal) * 100;
+      }
+      
+      let veredito = "";
+      if (margem > 40) {
+        veredito = "Excelente gestão! Sua margem de lucro está alta e os seus custos fixos estão muito bem controlados. Continue com a estratégia atual.";
+      } else if (margem > 15) {
+        veredito = "Gestão equilibrada. Você está com lucro, mas vale a pena investigar detalhadamente os gastos e cortar pequenas despesas supérfluas.";
+      } else {
+        veredito = "Alerta: Seus gastos estão muito próximos (ou superando) a sua receita. Corte imediatamente assinaturas ou custos de manutenção desnecessários e tente focar em horários/corridas de maior rentabilidade.";
+      }
+
+      doc.setFontSize(10);
+      doc.setTextColor(80);
+      const maxLineWidth = 180;
+      const textLines = doc.splitTextToSize(veredito, maxLineWidth);
+      doc.text(textLines, 14, finalY + 25);
+
+      doc.save(`Relatorio_MeuCaixa_${getLocalISODate()}.pdf`);
+      mostrarToast("Relatório PDF Gerado!", "sucesso");
+    } catch (e) {
+      console.error(e);
+      mostrarToast("Erro ao gerar PDF", "erro");
+    }
+  };
+
   const exportarCSV = () => {
     try {
-      const cabecalho = [
-        "Data",
-        "Tipo",
-        "Categoria",
-        "Descricao",
-        "Valor",
-      ].join(";");
-      const linhas = transacoes.map((t) =>
-        [
-          t.data,
+      const cabecalho = ["Data", "Tipo", "Categoria", "Valor", "Descricao"].join(";");
+      const linhas = transacoes.map((t) => {
+        const catArray = t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
+        const categoriaNome = catArray.find((c) => c.id === t.categoria)?.nome || t.categoria;
+        
+        // Trata a descrição escapando aspas se necessário (formato CSV)
+        let descricaoLimpa = t.descricao.replace(/;/g, ",").replace(/\n/g, " ");
+        if (descricaoLimpa.includes(",")) {
+            descricaoLimpa = `"${descricaoLimpa}"`;
+        }
+
+        // Formata o valor sem o R$ para planilha
+        const valorFormatado = t.valor.toFixed(2).replace(".", ",");
+        
+        return [
+          formatarDataBR(t.data),
           t.tipo === "receita" ? "Entrada" : "Saida",
-          (t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA).find(
-            (c) => c.id === t.categoria,
-          )?.nome || t.categoria,
-          t.descricao.replace(/;/g, ","),
-          t.valor.toFixed(2).replace(".", ","),
-        ].join(";"),
-      );
+          categoriaNome,
+          valorFormatado,
+          descricaoLimpa,
+        ].join(";");
+      });
 
       const conteudo = [cabecalho, ...linhas].join("\n");
       const blob = new Blob(["\ufeff" + conteudo], {
@@ -558,6 +693,7 @@ export default function App() {
     lucroMes,
     transacoesMes,
     todasCategoriasGastos,
+    totalCustosFixos,
   } = useMemo(() => {
     const hojeStr = getLocalISODate();
     const hoje = new Date();
@@ -678,6 +814,8 @@ export default function App() {
     });
 
     const maxV = Math.max(...dias.map((d) => d.receitas + d.despesas), 100);
+    const totalCustosFixos = tMes.filter(t => t.tipo === "despesa" && t.custoFixo).reduce((a, b) => a + b.valor, 0);
+
     return {
       saldoTotal: total,
       resumoMes: rMes,
@@ -691,6 +829,7 @@ export default function App() {
       metaFulfillment,
       lucroMes: rMes.receitas - rMes.despesas,
       transacoesMes: tMes,
+      totalCustosFixos,
       dadosGrafico: { dias, maxValor: Math.ceil(maxV / 50) * 50 },
     };
   }, [transacoes, metaDiaria]);
@@ -698,15 +837,17 @@ export default function App() {
   const historicoAgrupado = useMemo(() => {
     const grupos: Record<string, SemanaAgrupada> = {};
 
+    const buscaStr = buscaDescricao.toLowerCase();
+
     // Filtrar transações
     let transacoesProcessar = transacoes.filter((t) => {
       const matchTipo = filtroTipo === "todos" || t.tipo === filtroTipo;
       const matchDesc =
-        t.descricao.toLowerCase().includes(buscaDescricao.toLowerCase()) ||
+        t.descricao.toLowerCase().includes(buscaStr) ||
         ((t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA)
           .find((c) => c.id === t.categoria)
           ?.nome?.toLowerCase()
-          ?.includes(buscaDescricao.toLowerCase()) ?? false);
+          ?.includes(buscaStr) ?? false);
       return matchTipo && matchDesc;
     });
 
@@ -755,8 +896,36 @@ export default function App() {
     };
   }, [transacoes, filtroTipo, buscaDescricao]);
 
+  const THEME_COLORS = {
+    blue: `
+      --primary-50: #eff6ff; --primary-100: #dbeafe; --primary-200: #bfdbfe; --primary-300: #93c5fd;
+      --primary-400: #60a5fa; --primary-500: #3b82f6; --primary-600: #2563eb; --primary-700: #1d4ed8;
+      --primary-800: #1e40af; --primary-900: #1e3a8a; --primary-950: #172554;
+    `,
+    purple: `
+      --primary-50: #faf5ff; --primary-100: #f3e8ff; --primary-200: #e9d5ff; --primary-300: #d8b4fe;
+      --primary-400: #c084fc; --primary-500: #a855f7; --primary-600: #9333ea; --primary-700: #7e22ce;
+      --primary-800: #6b21a8; --primary-900: #581c87; --primary-950: #3b0764;
+    `,
+    green: `
+      --primary-50: #f0fdf4; --primary-100: #dcfce7; --primary-200: #bbf7d0; --primary-300: #86efac;
+      --primary-400: #4ade80; --primary-500: #22c55e; --primary-600: #16a34a; --primary-700: #15803d;
+      --primary-800: #166534; --primary-900: #14532d; --primary-950: #052e16;
+    `,
+    orange: `
+      --primary-50: #fff7ed; --primary-100: #ffedd5; --primary-200: #fed7aa; --primary-300: #fdba74;
+      --primary-400: #fb923c; --primary-500: #f97316; --primary-600: #ea580c; --primary-700: #c2410c;
+      --primary-800: #9a3412; --primary-900: #7c2d12; --primary-950: #431407;
+    `
+  };
+
   return (
     <div className={isDarkMode ? "dark" : ""}>
+      <style>{`
+        :root {
+          ${THEME_COLORS[corTema]}
+        }
+      `}</style>
       <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-300">
         <AnimatePresence>
           {toast && (
@@ -840,11 +1009,8 @@ export default function App() {
                 </div>
                 <div className="min-w-0 flex items-baseline gap-1.5">
                   <h1 className="text-lg font-semibold tracking-tight leading-none dark:text-white display-font shrink-0">
-                    Meu<span className="text-blue-500">Caixa</span>
+                    Meu<span className="text-primary-500">Caixa</span>
                   </h1>
-                  <span className="text-[9px] font-medium text-gray-500 tracking-widest shrink-0">
-                    PRO
-                  </span>
                 </div>
               </motion.div>
 
@@ -858,7 +1024,7 @@ export default function App() {
                   }}
                   className="p-1.5 flex items-center gap-1.5 transition-all bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 rounded-lg"
                 >
-                  <BrainCircuit size={16} className="text-blue-500" />
+                  <RainbowAIIcon size={18} />
                 </motion.button>
                 <button
                   onClick={() => {
@@ -894,9 +1060,9 @@ export default function App() {
                   {formatarMoeda(ganhoHoje)}
                 </span>
               </div>
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:gap-1.5 py-1.5 px-1 sm:px-2.5 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg text-center overflow-hidden">
-                <span className="text-[9px] sm:text-[10px] font-semibold text-blue-600/70 uppercase tracking-wider mb-0.5 sm:mb-0">Mês</span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-blue-600 truncate w-full max-w-full">
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:gap-1.5 py-1.5 px-1 sm:px-2.5 bg-primary-50/50 dark:bg-primary-900/10 rounded-lg text-center overflow-hidden">
+                <span className="text-[9px] sm:text-[10px] font-semibold text-primary-600/70 uppercase tracking-wider mb-0.5 sm:mb-0">Mês</span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-primary-600 truncate w-full max-w-full">
                   {formatarMoeda(projecaoMensal)}
                 </span>
               </div>
@@ -918,7 +1084,7 @@ export default function App() {
                 }}
                 className="px-3 py-1.5 flex items-center gap-1.5 transition-all bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 rounded-lg"
               >
-                <BrainCircuit size={16} className="text-blue-500" />
+                <RainbowAIIcon size={18} />
                 <span className="text-[11px] font-semibold tracking-wider text-gray-700 dark:text-gray-300">
                   AI Assist
                 </span>
@@ -1009,64 +1175,137 @@ export default function App() {
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="bg-white dark:bg-gray-900 rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden group"
+                    className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-neutral-200/60 dark:border-white/10 transition-all hover:shadow-md relative overflow-hidden group"
                   >
                     <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity whitespace-nowrap">
                       <TrendingUp
-                        size={80}
+                        size={64}
                         strokeWidth={1}
-                        className="transform translate-x-8 -translate-y-8"
+                        className="transform translate-x-4 -translate-y-4"
                       />
                     </div>
                     <div className="relative z-10 w-full">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold  tracking-wider">
-                          Balanço Mensal
-                        </span>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest block mb-0.5">
+                            Balanço Geral
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-medium capitalize">
+                            Referente a {new Date().toLocaleString("pt-BR", { month: "long" })}
+                          </span>
+                        </div>
                         <div
-                          className={`px-3 py-1 rounded-full text-[11px] font-medium  tracking-widest ${lucroMes >= 0 ? "bg-green-50 text-green-600 dark:bg-green-900/20" : "bg-red-50 text-red-600 dark:bg-red-900/20"}`}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${lucroMes >= 0 ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}
                         >
+                          {lucroMes >= 0 ? <ArrowUpRight size={10} strokeWidth={3} /> : <ArrowDownRight size={10} strokeWidth={3} />}
                           {lucroMes >= 0 ? "Lucro" : "Prejuízo"}
                         </div>
                       </div>
-                      <div className="mb-4">
+                      
+                      <div className="flex flex-col items-center justify-center mb-4 mt-2">
+                        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">Saldo Líquido</span>
                         <span
-                          className={`text-xl font-light tracking-tighter display-font block ${lucroMes < 0 ? "text-red-500" : "text-gray-900 dark:text-white"}`}
+                          className={`text-3xl sm:text-4xl font-light tracking-tighter display-font text-center ${lucroMes < 0 ? "text-red-500" : "text-gray-900 dark:text-white"}`}
                         >
                           {formatarMoeda(lucroMes)}
                         </span>
-                        <p className="text-xs font-medium text-gray-400 mt-2">
-                          Referente a{" "}
-                          {new Date().toLocaleString("pt-BR", {
-                            month: "long",
-                          })}
-                        </p>
                       </div>
-                      <div className="flex items-center gap-3 pt-6 border-t border-gray-100 dark:border-gray-800/60">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1.5 mb-1 text-green-600 dark:text-green-500/80">
-                            <ArrowUpRight size={16} strokeWidth={3} />
-                            <span className="text-[11px] font-semibold  tracking-widest">
+
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 flex flex-col justify-center items-center">
+                          <div className="flex items-center gap-1.5 mb-2 text-green-600 dark:text-green-500">
+                            <div className="bg-green-100 dark:bg-green-900/30 p-1 rounded-md">
+                              <ArrowUpRight size={14} strokeWidth={3} />
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest">
                               Entradas
                             </span>
                           </div>
-                          <span className="text-2xl font-semibold tracking-tight display-font">
+                          <span className="text-lg sm:text-xl font-semibold tracking-tight display-font text-gray-800 dark:text-gray-100">
                             {formatarMoeda(resumoMes.receitas)}
                           </span>
                         </div>
-                        <div className="w-px h-12 bg-gray-100 dark:bg-gray-800" />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1.5 mb-1 text-red-500 dark:text-red-500/80">
-                            <ArrowDownRight size={16} strokeWidth={3} />
-                            <span className="text-[11px] font-semibold  tracking-widest">
+                        
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 flex flex-col justify-center items-center relative">
+                          <div className="flex items-center gap-1.5 mb-2 text-red-500 dark:text-red-400">
+                            <div className="bg-red-100 dark:bg-red-900/30 p-1 rounded-md">
+                              <ArrowDownRight size={14} strokeWidth={3} />
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest">
                               Saídas
                             </span>
                           </div>
-                          <span className="text-2xl font-semibold tracking-tight display-font">
+                          <span className="text-lg sm:text-xl font-semibold tracking-tight display-font text-gray-800 dark:text-gray-100">
                             {formatarMoeda(resumoMes.despesas)}
                           </span>
+                          {totalCustosFixos > 0 && (
+                            <div className="absolute -bottom-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
+                              Fixos: {formatarMoeda(totalCustosFixos)}
+                            </div>
+                          )}
                         </div>
                       </div>
+
+                      <div className="bg-primary-50/50 dark:bg-primary-900/10 p-3.5 rounded-2xl border border-primary-100/50 dark:border-primary-900/20 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <TrendingUp size={14} className="text-primary-500" strokeWidth={2.5} />
+                            <span className="text-primary-600 dark:text-primary-400 text-[10px] font-bold uppercase tracking-widest">
+                              Projeção Mensal
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-primary-500/70 font-medium tracking-wide">Estimativa baseada em {new Date().getDate()} dias</span>
+                        </div>
+                        <span className="text-xl font-semibold tracking-tight text-primary-700 dark:text-primary-300 display-font">
+                          {formatarMoeda(projecaoMensal)}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.12 }}
+                    className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-neutral-200/60 dark:border-white/10"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                       <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center">
+                          <PieChartIcon size={20} />
+                       </div>
+                       <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 tracking-tight">Regra de Ouro (50/30/20)</h3>
+                    </div>
+                    
+                    <div className="space-y-4">
+                       <div>
+                         <div className="flex justify-between items-end mb-1">
+                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Essencial (50%)</span>
+                            <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{formatarMoeda(resumoMes.receitas * 0.5)}</span>
+                         </div>
+                         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner">
+                            <div className="bg-primary-500 h-full rounded-full" style={{ width: '50%' }}></div>
+                         </div>
+                       </div>
+                       
+                       <div>
+                         <div className="flex justify-between items-end mb-1">
+                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Livre (30%)</span>
+                            <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{formatarMoeda(resumoMes.receitas * 0.3)}</span>
+                         </div>
+                         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner">
+                            <div className="bg-purple-500 h-full rounded-full" style={{ width: '30%' }}></div>
+                         </div>
+                       </div>
+
+                       <div>
+                         <div className="flex justify-between items-end mb-1">
+                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Reserva (20%)</span>
+                            <span className="text-sm font-bold text-green-600 dark:text-green-500">{formatarMoeda(resumoMes.receitas * 0.2)}</span>
+                         </div>
+                         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner">
+                            <div className="bg-green-500 h-full rounded-full" style={{ width: '20%' }}></div>
+                         </div>
+                       </div>
                     </div>
                   </motion.div>
 
@@ -1085,7 +1324,7 @@ export default function App() {
                               setTempMeta(String(metaDiaria));
                               setIsEditingMeta(true);
                             }}
-                            className="p-2 -mr-2 text-gray-300 hover:text-blue-500 transition-colors"
+                            className="p-2 -mr-2 text-gray-300 hover:text-primary-500 transition-colors"
                           >
                             <Pencil size={14} />
                           </button>
@@ -1118,14 +1357,14 @@ export default function App() {
                       className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all flex flex-col justify-between"
                     >
                       <div>
-                        <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/10 text-blue-500 rounded-xl flex items-center justify-center mb-4">
+                        <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/10 text-primary-500 rounded-xl flex items-center justify-center mb-4">
                           <LineChart size={20} />
                         </div>
                         <span className="text-gray-400 text-[11px] font-semibold  tracking-wider block mb-1">
                           Ritmo Médio
                         </span>
                       </div>
-                      <span className="text-xl font-light text-blue-600 dark:text-blue-400 display-font block mt-auto pt-4">
+                      <span className="text-xl font-light text-primary-600 dark:text-primary-400 display-font block mt-auto pt-4">
                         {formatarMoeda(mediaDiaria).replace("R$", "")}
                       </span>
                     </motion.div>
@@ -1144,7 +1383,7 @@ export default function App() {
                   >
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-xs font-semibold text-gray-500  tracking-wider group-hover:text-blue-500 transition-colors">
+                        <h3 className="text-xs font-semibold text-gray-500  tracking-wider group-hover:text-primary-500 transition-colors">
                           Onde está gastando (Mês)
                         </h3>
                       </div>
@@ -1249,7 +1488,7 @@ export default function App() {
                               <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2">
                                   <div
-                                    className={`w-2 h-2 rounded-full ${["bg-blue-500", "bg-red-500", "bg-green-500", "bg-orange-500"][index % 4]}`}
+                                    className={`w-2 h-2 rounded-full ${["bg-primary-500", "bg-red-500", "bg-green-500", "bg-orange-500"][index % 4]}`}
                                   />
                                   <span className="text-xs font-semibold  tracking-wider text-gray-700 dark:text-gray-300">
                                     {cat.nome}
@@ -1263,7 +1502,7 @@ export default function App() {
                                 <motion.div
                                   initial={{ width: 0 }}
                                   animate={{ width: `${cat.pct}%` }}
-                                  className={`h-full rounded-full ${["bg-blue-500", "bg-red-500", "bg-green-500", "bg-orange-500"][index % 4]}`}
+                                  className={`h-full rounded-full ${["bg-primary-500", "bg-red-500", "bg-green-500", "bg-orange-500"][index % 4]}`}
                                 />
                               </div>
                             </div>
@@ -1279,42 +1518,57 @@ export default function App() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
+                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
                         onClick={() => setIsEditingMeta(false)}
                       >
                         <motion.div
-                          initial={{ scale: 0.9, y: 20 }}
-                          animate={{ scale: 1, y: 0 }}
-                          exit={{ scale: 0.9, y: 20 }}
-                          className="bg-white dark:bg-gray-900 p-3 rounded-xl w-full max-w-xs border dark:border-gray-800"
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.9, opacity: 0 }}
+                          className="bg-white dark:bg-gray-900 p-6 rounded-2xl w-full max-w-[320px] shadow-2xl border border-gray-100 dark:border-gray-800"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <h3 className="text-[11px] font-medium  text-gray-400 mb-4 tracking-widest">
-                            Ajustar Meta Diária
-                          </h3>
-                          <input
-                            type="number"
-                            value={tempMeta}
-                            onChange={(e) => setTempMeta(e.target.value)}
-                            className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl mb-4 font-medium outline-none border dark:border-gray-700"
-                          />
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              onClick={() => setIsEditingMeta(false)}
-                              className="py-3 bg-gray-100 dark:bg-gray-800 rounded-xl font-medium text-xs  tracking-widest"
-                            >
-                              Sair
-                            </button>
-                            <button
-                              onClick={() => {
-                                setMetaDiaria(Number(tempMeta));
-                                setIsEditingMeta(false);
-                                mostrarToast("Meta atualizada");
-                              }}
-                              className="py-3 bg-blue-600 text-white rounded-xl font-medium text-xs  tracking-widest border-none"
-                            >
-                              Salvar
-                            </button>
+                          <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-2xl flex items-center justify-center mb-4">
+                              <Target size={24} />
+                            </div>
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                              Meta Diária
+                            </h3>
+                            <p className="text-[10px] font-medium text-gray-400 tracking-widest uppercase mb-6">
+                              Ajuste seu objetivo
+                            </p>
+                            
+                            <div className="relative w-full mb-6">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">R$</span>
+                              <input
+                                type="number"
+                                value={tempMeta}
+                                onChange={(e) => setTempMeta(e.target.value)}
+                                className="w-full pl-10 pr-4 py-4 bg-gray-50 dark:bg-gray-800/80 rounded-xl font-bold text-xl outline-none focus:ring-2 ring-primary-500/20 transition-all border border-gray-100 dark:border-gray-700/50"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 w-full">
+                              <button
+                                onClick={() => setIsEditingMeta(false)}
+                                className="py-3.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-[10px] tracking-widest uppercase active:scale-95 transition-transform"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setMetaDiaria(Number(tempMeta));
+                                  setIsEditingMeta(false);
+                                  mostrarToast("Meta atualizada");
+                                  vibrar([10, 20]);
+                                }}
+                                className="py-3.5 bg-primary-600 text-white rounded-xl font-bold text-[10px] tracking-widest uppercase shadow-lg shadow-primary-600/20 active:scale-95 transition-transform"
+                              >
+                                Salvar
+                              </button>
+                            </div>
                           </div>
                         </motion.div>
                       </motion.div>
@@ -1332,9 +1586,9 @@ export default function App() {
                              setTabAtual("adicionar");
                              // Ideally we would prefill "Combustível", but without changing add screen state we just route to it for now
                           }}
-                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
                         >
-                           <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 flex items-center justify-center mb-2">
+                           <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 flex items-center justify-center mb-2 shadow-inner">
                              <Droplet size={16} />
                            </div>
                            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Gasolina</span>
@@ -1345,9 +1599,9 @@ export default function App() {
                              setTransacaoEmEdicao(null);
                              setTabAtual("adicionar");
                           }}
-                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
                         >
-                           <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 flex items-center justify-center mb-2">
+                           <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 flex items-center justify-center mb-2 shadow-inner">
                              <Coffee size={16} />
                            </div>
                            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Refeição</span>
@@ -1358,9 +1612,9 @@ export default function App() {
                              setTransacaoEmEdicao(null);
                              setTabAtual("adicionar");
                           }}
-                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
                         >
-                           <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center mb-2">
+                           <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center mb-2 shadow-inner">
                              <Wrench size={16} />
                            </div>
                            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Manutenção</span>
@@ -1371,9 +1625,9 @@ export default function App() {
                              setTransacaoEmEdicao(null);
                              setTabAtual("adicionar");
                           }}
-                          className="flex flex-col items-center justify-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow"
+                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
                         >
-                           <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center mb-2">
+                           <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center mb-2 shadow-inner">
                              <Car size={16} />
                            </div>
                            <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Corridas</span>
@@ -1387,13 +1641,13 @@ export default function App() {
                       initial={{ scale: 0.95, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ delay: 0.15 }}
-                      className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between"
+                      className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-md flex flex-col justify-between"
                     >
                       <span className="text-[11px] font-semibold text-gray-400  tracking-wider block mb-4">
                         Mês Atual
                       </span>
                       <div>
-                        <div className="text-xl font-light text-blue-600 dark:text-blue-400 display-font">
+                        <div className="text-xl font-light text-primary-600 dark:text-primary-400 display-font">
                           {formatarMoeda(
                             resumoMes.receitas - resumoMes.despesas,
                           )}
@@ -1440,7 +1694,7 @@ export default function App() {
                         </h3>
                         <div className="flex gap-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                            <div className="w-2 h-2 bg-primary-500 rounded-full" />
                             <span className="text-[11px] font-medium text-gray-400 ">
                               Ganhos
                             </span>
@@ -1525,9 +1779,10 @@ export default function App() {
                               </linearGradient>
                             </defs>
                             <CartesianGrid
-                              strokeDasharray="6 6"
+                              strokeDasharray="4 4"
                               vertical={false}
-                              stroke={isDarkMode ? "#1F2937" : "#F3F4F6"}
+                              strokeOpacity={isDarkMode ? 0.1 : 0.4}
+                              stroke={isDarkMode ? "#ffffff" : "#cbd5e1"}
                             />
                             <XAxis
                               dataKey="diaSemana"
@@ -1547,7 +1802,7 @@ export default function App() {
                               }
                             />
                             <Area
-                              type="monotone"
+                              type="natural"
                               dataKey="receitas"
                               stroke="#2563EB"
                               strokeWidth={3}
@@ -1559,7 +1814,7 @@ export default function App() {
                               activeDot={{ r: 6, strokeWidth: 0, fill: '#2563EB' }}
                             />
                             <Area
-                              type="monotone"
+                              type="natural"
                               dataKey="despesas"
                               stroke="#DC2626"
                               strokeWidth={3}
@@ -1571,7 +1826,7 @@ export default function App() {
                               activeDot={{ r: 6, strokeWidth: 0, fill: '#DC2626' }}
                             />
                             <Area
-                              type="monotone"
+                              type="natural"
                               dataKey="lucro"
                               stroke="#10B981"
                               strokeWidth={3}
@@ -1680,7 +1935,7 @@ export default function App() {
                         Atingimento de Meta
                       </h3>
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                        <div className="w-2 h-2 bg-primary-500 rounded-full" />
                         <span className="text-[11px] font-medium text-gray-400  tracking-widest">
                           Meta: {formatarMoeda(metaDiaria)}
                         </span>
@@ -1751,39 +2006,6 @@ export default function App() {
                       </ResponsiveContainer>
                     </div>
                   </motion.div>
-
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.25 }}
-                    className="grid grid-cols-1 gap-2"
-                  >
-                    <div className="bg-blue-600 rounded-xl p-3 text-white shadow-md shadow-blue-600/20 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <TrendingUp
-                          size={60}
-                          className="transform translate-x-4 -translate-y-4"
-                        />
-                      </div>
-                      <div className="relative z-10 w-full">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-blue-200 text-xs font-semibold  tracking-wider block">
-                            Projeção Mensal
-                          </span>
-                          <div className="px-3 py-1 bg-white/20 rounded-full text-[11px] font-medium  tracking-widest whitespace-nowrap">
-                            Estimado
-                          </div>
-                        </div>
-                        <span className="text-xl font-light tracking-tighter display-font block mb-4">
-                          {formatarMoeda(projecaoMensal)}
-                        </span>
-                        <p className="text-xs text-blue-100 font-medium leading-relaxed max-w-[280px]">
-                          Com base no seu ritmo atual, este é o faturamento
-                          esperado para o final do mês corrente.
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
                 </div>
               )}
 
@@ -1807,7 +2029,7 @@ export default function App() {
                         placeholder="Buscar..."
                         value={buscaDescricao}
                         onChange={(e) => setBuscaDescricao(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 text-sm outline-none focus:ring-2 ring-blue-500/10 transition-all font-medium text-gray-800 dark:text-gray-200"
+                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 text-sm outline-none focus:ring-2 ring-primary-500/20 transition-all font-medium text-gray-800 dark:text-gray-200 shadow-sm"
                       />
                       <ListIcon
                         className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -1816,7 +2038,7 @@ export default function App() {
                     </div>
                     <button
                       onClick={exportarCSV}
-                      className="bg-white dark:bg-gray-900 px-5 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center justify-center text-blue-600 shadow-sm hover:bg-gray-50 transition-colors"
+                      className="bg-white dark:bg-gray-900 px-5 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center justify-center text-primary-600 shadow-sm hover:bg-gray-50 transition-colors"
                     >
                       <Download size={18} />
                     </button>
@@ -1859,11 +2081,25 @@ export default function App() {
                                   })}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-[13px] font-semibold truncate text-gray-900 dark:text-gray-100">
-                                    {t.descricao || "Geral"}
-                                  </p>
-                                  <p className="text-xs text-gray-500  tracking-widest mt-0.5">
-                                    {getNomeCategoria(t)}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-[13px] font-semibold truncate text-gray-900 dark:text-gray-100">
+                                      {t.descricao || "Geral"}
+                                    </p>
+                                    {t.custoFixo && (
+                                      <span className="bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                                        Fixo
+                                      </span>
+                                    )}
+                                    {t.tags && t.tags.length > 0 && t.tags.map(tag => (
+                                      <span key={tag} className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                                        #{tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-xs text-gray-500 tracking-widest mt-0.5 flex gap-1.5 items-center">
+                                    <span>{getNomeCategoria(t)}</span>
+                                    <span className="w-1 h-1 bg-gray-300 dark:bg-gray-700 rounded-full"></span>
+                                    <span>{formatarDataBR(t.data)}</span>
                                   </p>
                                 </div>
                               </div>
@@ -1879,7 +2115,7 @@ export default function App() {
                                       setTransacaoEmEdicao(t);
                                       setTabAtual("adicionar");
                                     }}
-                                    className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                    className="p-1.5 text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                                   >
                                     <Pencil size={14} />
                                   </button>
@@ -1944,7 +2180,7 @@ export default function App() {
                 setTransacaoEmEdicao(null);
                 setTabAtual("adicionar");
               }}
-              className="absolute -top-8 w-10 h-10 bg-blue-600 rounded-full shadow-lg shadow-blue-600/30 flex items-center justify-center text-white border-4 border-white dark:border-gray-950 transition-all"
+              className="absolute -top-8 w-10 h-10 bg-primary-600 rounded-full shadow-lg shadow-primary-600/30 flex items-center justify-center text-white border-4 border-white dark:border-gray-950 transition-all"
             >
               <Plus
                 size={22}
@@ -2007,7 +2243,7 @@ export default function App() {
                 <div className="flex items-center justify-between mb-6 sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md pt-1 pb-3 z-10 border-b border-gray-100 dark:border-gray-800/60">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                       <BarChart3 size={20} className="text-blue-500" />
+                       <BarChart3 size={20} className="text-primary-500" />
                        Todas as Despesas
                     </h3>
                     <p className="text-xs text-gray-500 mt-1 font-medium">Neste mês</p>
@@ -2033,7 +2269,7 @@ export default function App() {
                              {cat.nome.substring(0,2).toUpperCase()}
                            </div>
                            <div>
-                             <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{cat.nome}</p>
+                             <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{cat.nome}</p>
                              <p className="text-xs text-gray-400 font-medium">{cat.pct.toFixed(1)}% do total</p>
                            </div>
                          </div>
@@ -2128,8 +2364,28 @@ export default function App() {
                 >
                   <X size={18} />
                 </button>
-                <h2 className="font-medium mb-4 text-lg">Dados e Backup</h2>
+                <h2 className="font-medium mb-4 text-lg">Configurações</h2>
+                
+                <div className="mb-6 space-y-3">
+                   <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Cor do Tema</h3>
+                   <div className="flex justify-between gap-2">
+                     <button onClick={() => setCorTema("blue")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "blue" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#3b82f6" }}></div>
+                     </button>
+                     <button onClick={() => setCorTema("purple")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "purple" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#a855f7" }}></div>
+                     </button>
+                     <button onClick={() => setCorTema("green")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "green" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#22c55e" }}></div>
+                     </button>
+                     <button onClick={() => setCorTema("orange")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "orange" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#f97316" }}></div>
+                     </button>
+                   </div>
+                </div>
+
                 <div className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Dados e Backup</h3>
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
@@ -2145,7 +2401,7 @@ export default function App() {
                     }}
                     className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
                   >
-                    <Download size={18} className="text-blue-500" /> Salvar
+                    <Download size={18} className="text-primary-500" /> Salvar
                     Backup
                   </motion.button>
                   <motion.button
@@ -2166,6 +2422,16 @@ export default function App() {
                     className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
                   >
                     <FileText size={18} className="text-purple-500" /> Exportar para CSV
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                        gerarRelatorioPDF();
+                        setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
+                  >
+                    <FileText size={18} className="text-primary-500" /> Relatório Profissional (PDF)
                   </motion.button>
                   <motion.button
                     whileTap={{ scale: 0.98 }}
@@ -2228,18 +2494,18 @@ export default function App() {
                 className="bg-white dark:bg-gray-950 w-full max-w-2xl rounded-xl overflow-hidden flex flex-col h-[90vh] shadow-[0_0_50px_-12px_rgba(59,130,246,0.3)] border dark:border-gray-800"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="p-3 bg-gradient-to-br from-blue-700 via-indigo-800 to-blue-900 text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-3 opacity-5 animate-pulse scale-150 rotate-12">
-                    <BrainCircuit size={150} />
+                <div className="p-3 bg-gradient-to-br from-primary-700 via-indigo-800 to-primary-900 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 animate-pulse scale-150 rotate-12">
+                    <RainbowAIIcon size={120} />
                   </div>
 
                   <div className="relative z-10">
                     <div className="flex justify-between items-center mb-3">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                          <Sparkles size={16} className="text-blue-200" />
+                          <RainbowAIIcon size={20} />
                         </div>
-                        <span className="text-[11px] font-medium  tracking-normal text-blue-100">
+                        <span className="text-[11px] font-medium  tracking-normal text-primary-100">
                           Consultoria Nativa
                         </span>
                       </div>
@@ -2254,9 +2520,9 @@ export default function App() {
                     <div className="flex items-end justify-between">
                       <div>
                         <h2 className="text-2xl font-semibold tracking-tighter mb-1 leading-none italic">
-                          MeuCaixa PRO
+                          MeuCaixa
                         </h2>
-                        <p className="text-[11px] font-medium text-blue-200  tracking-widest">
+                        <p className="text-[11px] font-medium text-primary-200  tracking-widest">
                           Sua inteligência financeira offline
                         </p>
                       </div>
@@ -2264,19 +2530,19 @@ export default function App() {
                       <div className="flex bg-white/10 backdrop-blur-xl p-1 rounded-xl border border-white/10">
                         <button
                           onClick={() => setActiveAIView("insights")}
-                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "insights" ? "bg-white text-blue-600" : "text-blue-100"}`}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "insights" ? "bg-white text-primary-600" : "text-primary-100"}`}
                         >
                           Insights
                         </button>
                         <button
                           onClick={() => setActiveAIView("chat")}
-                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "chat" ? "bg-white text-blue-600" : "text-blue-100"}`}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "chat" ? "bg-white text-primary-600" : "text-primary-100"}`}
                         >
                           Chat
                         </button>
                         <button
                           onClick={() => setActiveAIView("settings")}
-                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "settings" ? "bg-white text-blue-600" : "text-blue-100"}`}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "settings" ? "bg-white text-primary-600" : "text-primary-100"}`}
                         >
                           <Settings size={12} />
                         </button>
@@ -2291,10 +2557,10 @@ export default function App() {
                 >
                   {activeAIView === "insights" ? (
                     <>
-                      <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-blue-50 dark:border-blue-900/20 shadow-md shadow-blue-500/5 mb-2 relative overflow-hidden group">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all" />
+                      <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-primary-50 dark:border-primary-900/20 shadow-md shadow-primary-500/5 mb-2 relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary-500/5 rounded-full blur-2xl group-hover:bg-primary-500/10 transition-all" />
                         <div className="flex items-center gap-2 mb-4">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20">
                             <Zap
                               size={24}
                               strokeWidth={3}
@@ -2302,7 +2568,7 @@ export default function App() {
                             />
                           </div>
                           <div>
-                            <p className="text-[11px] font-medium  tracking-widest text-blue-600/60 dark:text-blue-400/60 mb-0.5">
+                            <p className="text-[11px] font-medium  tracking-widest text-primary-600/60 dark:text-primary-400/60 mb-0.5">
                               Diagnóstico
                             </p>
                             <h3 className="text-sm font-medium text-gray-900 dark:text-white  tracking-tight">
@@ -2310,7 +2576,7 @@ export default function App() {
                             </h3>
                           </div>
                         </div>
-                        <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300 leading-relaxed italic border-l-4 border-blue-500 pl-4 py-1">
+                        <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300 leading-relaxed italic border-l-4 border-primary-500 pl-4 py-1">
                           "Sistema operacional estável. Iniciei a varredura
                           profunda em {transacoesMes.length} transações.
                           Encontrei padrões de rentabilidade que exigem sua
@@ -2334,7 +2600,7 @@ export default function App() {
                                     ? "bg-yellow-50/30 dark:bg-yellow-900/10 border-yellow-100/50 dark:border-yellow-900/20"
                                     : insight.tipo === "financeiro"
                                       ? "bg-purple-50/30 dark:bg-purple-900/10 border-purple-100/50 dark:border-purple-900/20"
-                                      : "bg-blue-50/30 dark:bg-blue-900/10 border-blue-100/50 dark:border-blue-900/20"
+                                      : "bg-primary-50/30 dark:bg-primary-900/10 border-primary-100/50 dark:border-primary-900/20"
                             }`}
                           >
                             <div className="flex items-start gap-3">
@@ -2348,7 +2614,7 @@ export default function App() {
                                         ? "bg-yellow-600 text-white shadow-yellow-600/20"
                                         : insight.tipo === "financeiro"
                                           ? "bg-purple-600 text-white shadow-purple-600/20"
-                                          : "bg-blue-600 text-white shadow-blue-600/20"
+                                          : "bg-primary-600 text-white shadow-primary-600/20"
                                 }`}
                               >
                                 {insight.tipo === "alerta" && (
@@ -2379,7 +2645,7 @@ export default function App() {
                                           ? "text-yellow-700 dark:text-yellow-400"
                                           : insight.tipo === "financeiro"
                                             ? "text-purple-700 dark:text-purple-400"
-                                            : "text-blue-700 dark:text-blue-400"
+                                            : "text-primary-700 dark:text-primary-400"
                                   }`}
                                 >
                                   {insight.titulo}
@@ -2411,7 +2677,7 @@ export default function App() {
                             mostrarToast("Erro ao processar.", "erro");
                           }
                         }}
-                        className="w-full py-3 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center gap-2 text-xs font-medium  tracking-normal text-blue-600 dark:text-blue-400 border-2 border-blue-100 dark:border-blue-900/30 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all shadow-lg shadow-blue-500/5 group"
+                        className="w-full py-3 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center gap-2 text-xs font-medium  tracking-normal text-primary-600 dark:text-primary-400 border-2 border-primary-100 dark:border-primary-900/30 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all shadow-lg shadow-primary-500/5 group"
                       >
                         <RefreshCcw
                           size={18}
@@ -2430,15 +2696,15 @@ export default function App() {
                               rotate: [0, 5, -5, 0],
                             }}
                             transition={{ duration: 4, repeat: Infinity }}
-                            className="w-24 h-24 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/40 mb-4"
+                            className="w-24 h-24 bg-gradient-to-tr from-primary-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/40 mb-4"
                           >
-                            <BrainCircuit size={48} strokeWidth={1.5} />
+                            <RainbowAIIcon size={50} />
                           </motion.div>
                           <h3 className="text-lg font-medium dark:text-white mb-3  tracking-tight">
                             Assistente Financeiro
                           </h3>
                           <p className="text-xs font-medium text-gray-400 leading-relaxed  tracking-normal max-w-[280px]">
-                            Pronto para análise situacional. Use voz ou texto
+                            Pronto para análise situacional. Faça perguntas em texto
                             para diagnósticos financeiros em tempo real.
                           </p>
 
@@ -2464,7 +2730,7 @@ export default function App() {
                           <div
                             className={`max-w-[85%] p-3 rounded-xl text-[12px] font-medium leading-relaxed shadow-md ${
                               msg.role === "user"
-                                ? "bg-blue-600 text-white rounded-tr-none shadow-blue-600/10"
+                                ? "bg-primary-600 text-white rounded-tr-none shadow-primary-600/10"
                                 : "bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-800 rounded-tl-none shadow-gray-200/5"
                             }`}
                           >
@@ -2507,9 +2773,9 @@ export default function App() {
                           animate={{ opacity: 1 }}
                           className="flex gap-2 p-3 bg-gray-100 dark:bg-gray-900/50 rounded-xl w-fit"
                         >
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" />
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce" />
+                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
                         </motion.div>
                       )}
                     </div>
@@ -2539,32 +2805,11 @@ export default function App() {
                                   nivelDetalhe: nivel,
                                 })
                               }
-                              className={`py-3 rounded-xl text-xs font-medium  tracking-widest border transition-all ${configAI.nivelDetalhe === nivel ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-600 border-gray-100 dark:border-gray-800"}`}
+                              className={`py-3 rounded-xl text-xs font-medium  tracking-widest border transition-all ${configAI.nivelDetalhe === nivel ? "bg-primary-600 text-white border-primary-600" : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-600 border-gray-100 dark:border-gray-800"}`}
                             >
                               {nivel}
                             </button>
                           ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <h3 className="text-[11px] font-medium  tracking-normal text-gray-400 px-2">
-                          Tom de Voz
-                        </h3>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(["formal", "amigavel", "direto"] as TomVozAI[]).map(
-                            (tom) => (
-                              <button
-                                key={tom}
-                                onClick={() =>
-                                  setConfigAI({ ...configAI, tomVoz: tom })
-                                }
-                                className={`py-3 rounded-xl text-xs font-medium  tracking-widest border transition-all ${configAI.tomVoz === tom ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-600 border-gray-100 dark:border-gray-800"}`}
-                              >
-                                {tom}
-                              </button>
-                            ),
-                          )}
                         </div>
                       </div>
 
@@ -2592,7 +2837,7 @@ export default function App() {
                             </span>
                           </div>
                           {configAI.focarEmGanhos ? (
-                            <ToggleRight className="text-blue-600" size={24} />
+                            <ToggleRight className="text-primary-600" size={24} />
                           ) : (
                             <ToggleLeft className="text-gray-300" size={24} />
                           )}
@@ -2619,7 +2864,7 @@ export default function App() {
                             </span>
                           </div>
                           {configAI.focarEmGastos ? (
-                            <ToggleRight className="text-blue-600" size={24} />
+                            <ToggleRight className="text-primary-600" size={24} />
                           ) : (
                             <ToggleLeft className="text-gray-300" size={24} />
                           )}
@@ -2652,7 +2897,7 @@ export default function App() {
                             </div>
                             {configAI.hapticosAtivos ? (
                               <ToggleRight
-                                className="text-blue-600"
+                                className="text-primary-600"
                                 size={24}
                               />
                             ) : (
@@ -2662,8 +2907,8 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
-                        <p className="text-[11px] font-medium text-blue-600 dark:text-blue-400 leading-relaxed text-center">
+                      <div className="p-3 bg-primary-50 dark:bg-primary-900/10 rounded-xl border border-primary-100 dark:border-primary-900/20">
+                        <p className="text-[11px] font-medium text-primary-600 dark:text-primary-400 leading-relaxed text-center">
                           Estas configurações são aplicadas instantaneamente e
                           alteram a profundidade e o tom das análises geradas
                           pelo Assistente.
@@ -2675,7 +2920,7 @@ export default function App() {
 
                 {activeAIView === "chat" && (
                   <div className="p-3 bg-white dark:bg-gray-950 border-t dark:border-gray-900">
-                    <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-[1.8rem] border border-gray-100 dark:border-gray-800 focus-within:border-blue-500/50 transition-colors">
+                    <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-[1.8rem] border border-gray-100 dark:border-gray-800 focus-within:border-primary-500/50 transition-colors">
                       <input
                         type="text"
                         value={userInput}
@@ -2686,7 +2931,7 @@ export default function App() {
                       />
                       <button
                         onClick={handleSendToAI}
-                        className="w-10 h-10 bg-blue-600 text-white rounded-[1.2rem] flex items-center justify-center hover:scale-[1.05] active:scale-95 transition-all shadow-lg shadow-blue-600/20"
+                        className="w-10 h-10 bg-primary-600 text-white rounded-[1.2rem] flex items-center justify-center hover:scale-[1.05] active:scale-95 transition-all shadow-lg shadow-primary-600/20"
                       >
                         <Send size={18} strokeWidth={3} />
                       </button>
@@ -2696,9 +2941,9 @@ export default function App() {
 
                 <div className="p-3 bg-white dark:bg-gray-950 border-t dark:border-gray-900 flex justify-between items-center px-8">
                   <div className="flex gap-1">
-                    <div className="w-1 h-1 rounded-full bg-blue-500"></div>
-                    <div className="w-1 h-1 rounded-full bg-blue-500 opacity-50"></div>
-                    <div className="w-1 h-1 rounded-full bg-blue-500 opacity-20"></div>
+                    <div className="w-1 h-1 rounded-full bg-primary-500"></div>
+                    <div className="w-1 h-1 rounded-full bg-primary-500 opacity-50"></div>
+                    <div className="w-1 h-1 rounded-full bg-primary-500 opacity-20"></div>
                   </div>
                   <p className="text-[11px] font-medium text-gray-300 dark:text-gray-800  tracking-normal">
                     Motor Financeiro Local v2.0
@@ -2733,7 +2978,63 @@ function FormularioLancamento({
   const [cat, setCat] = useState(edicao?.categoria || "");
   const [data, setData] = useState(edicao?.data || getLocalISODate());
   const [desc, setDesc] = useState(edicao?.descricao || "");
+  const [custoFixo, setCustoFixo] = useState(edicao?.custoFixo || false);
+  const [tags, setTags] = useState<string[]>(edicao?.tags || []);
+  const [tagInput, setTagInput] = useState("");
+  const [processandoRecibo, setProcessandoRecibo] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const lerRecibo = async (file: File) => {
+    try {
+      setProcessandoRecibo(true);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const base64Data = (reader.result as string).split(',')[1];
+          const apiKey = process.env.GEMINI_API_KEY;
+          if (!apiKey) {
+             alert("Chave do Gemini não configurada!");
+             setProcessandoRecibo(false);
+             return;
+          }
+          const ai = new GoogleGenAI({ apiKey });
+          
+          const prompt = `Analise este recibo ou nota fiscal e extraia os seguintes dados em JSON puro, sem formatação markdown:
+{
+  "valor": <number>, 
+  "descricao": "<string>", 
+  "data": "<YYYY-MM-DD>"
+}`;
+
+          const response = await ai.models.generateContent({
+             model: "gemini-3-flash-preview",
+             contents: {
+               parts: [
+                 { inlineData: { data: base64Data, mimeType: file.type } },
+                 { text: prompt }
+               ]
+             },
+             config: { responseMimeType: "application/json" }
+          });
+          
+          if (response.text) {
+             const json = JSON.parse(response.text);
+             if (json.valor) setValor(json.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 }));
+             if (json.descricao) setDesc(json.descricao.substring(0, 50));
+             if (json.data && /^\d{4}-\d{2}-\d{2}$/.test(json.data)) setData(json.data);
+          }
+        } catch (e) {
+          console.error("Erro ao ler recibo:", e);
+        } finally {
+          setProcessandoRecibo(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch(e) {
+      setProcessandoRecibo(false);
+    }
+  };
 
   const formatCurrencyEntry = (v: string) => {
     const n = v.replace(/\D/g, "");
@@ -2761,6 +3062,8 @@ function FormularioLancamento({
       categoria: cat,
       data,
       descricao: descricaoFinal,
+      custoFixo: (tipo === "despesa") ? custoFixo : undefined,
+      tags,
     });
   };
 
@@ -2786,7 +3089,7 @@ function FormularioLancamento({
           Valor do Lançamento
         </span>
         <div className="flex items-center justify-center mt-2 group">
-          <span className="text-xl font-light mr-2 text-gray-400 dark:text-gray-500 transition-colors group-focus-within:text-blue-500 display-font">
+          <span className="text-xl font-light mr-2 text-gray-400 dark:text-gray-500 transition-colors group-focus-within:text-primary-500 display-font">
             R$
           </span>
           <input
@@ -2851,12 +3154,12 @@ function FormularioLancamento({
             Data
           </span>
           <div className="flex items-center gap-2 text-sm font-semibold tracking-tight text-gray-800 dark:text-gray-200">
-            <CalendarIcon size={16} className="text-blue-500" />{" "}
+            <CalendarIcon size={16} className="text-primary-500" />{" "}
             {formatarDataBR(data)}
           </div>
         </motion.div>
 
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl focus-within:bg-white dark:focus-within:bg-gray-800 focus-within:ring-2 ring-blue-500/20 transition-all border border-transparent dark:border-gray-800">
+        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl focus-within:bg-white dark:focus-within:bg-gray-800 focus-within:ring-2 ring-primary-500/20 transition-all border border-transparent dark:border-gray-800">
           <span className="text-[11px] font-medium text-gray-500  tracking-wider block mb-1">
             Descrição
           </span>
@@ -2870,6 +3173,77 @@ function FormularioLancamento({
         </div>
       </div>
 
+      <div className="mb-4">
+        <label className="text-[11px] font-semibold text-gray-400  tracking-wider mb-2 block uppercase">Tags (Centros de Custo)</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {tags.map((tag, i) => (
+             <span key={i} className="bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 text-xs px-2.5 py-1 rounded-md flex items-center gap-1 font-medium">
+                #{tag}
+                <button onClick={() => setTags(tags.filter((_, idx) => idx !== i))} className="hover:text-primary-900 dark:hover:text-primary-100 ml-1">
+                   <Plus size={12} className="rotate-45" />
+                </button>
+             </span>
+          ))}
+        </div>
+        <input
+           type="text"
+           value={tagInput}
+           onChange={(e) => setTagInput(e.target.value)}
+           onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ',') {
+                 e.preventDefault();
+                 const val = tagInput.trim().replace(/^#/, '');
+                 if (val && !tags.includes(val)) {
+                    setTags([...tags, val]);
+                 }
+                 setTagInput("");
+              }
+           }}
+           placeholder="Ex: ferias, carro, nubank (pressione Enter)"
+           className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none font-medium text-sm focus:ring-4 ring-primary-500/10 border border-gray-100 dark:border-gray-800 transition-all text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+        />
+      </div>
+
+      {tipo === "despesa" && (
+        <div className="flex items-center justify-between mb-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-transparent dark:border-gray-800">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Custo Fixo Recorrente</span>
+          </div>
+          <button
+            onClick={() => setCustoFixo(!custoFixo)}
+            className={`w-10 h-6 flex items-center rounded-full p-1 transition-colors ${custoFixo ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-700"}`}
+          >
+            <motion.div
+              animate={{ x: custoFixo ? 16 : 0 }}
+              className="w-4 h-4 bg-white rounded-full shadow-sm"
+            />
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-center mb-4">
+        <input 
+          type="file" 
+          accept="image/*" 
+          className="hidden" 
+          ref={fileInputRef} 
+          onChange={(e) => e.target.files && e.target.files[0] ? lerRecibo(e.target.files[0]) : null} 
+        />
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={processandoRecibo}
+          className="flex items-center justify-center gap-2 p-3 w-full border border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+        >
+          {processandoRecibo ? (
+            <Loader2 size={18} className="animate-spin text-primary-500" />
+          ) : (
+            <Camera size={18} className="text-primary-500" />
+          )}
+          {processandoRecibo ? "Analisando com IA..." : "Escanear Nota / Recibo"}
+        </motion.button>
+      </div>
+
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.95 }}
@@ -2878,7 +3252,7 @@ function FormularioLancamento({
           vibrar(25);
           handleSalvar();
         }}
-        className={`w-full py-3 text-white rounded-xl font-semibold tracking-wide text-sm transition-all flex items-center justify-center gap-2 mt-auto ${!valor || !cat ? "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed" : "bg-blue-600 shadow-lg shadow-blue-600/30 hover:bg-blue-700"}`}
+        className={`w-full py-3 text-white rounded-xl font-semibold tracking-wide text-sm transition-all flex items-center justify-center gap-2 mt-auto ${!valor || !cat ? "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed" : "bg-primary-600 shadow-lg shadow-primary-600/30 hover:bg-primary-700"}`}
       >
         {edicao ? (
           <Pencil size={18} strokeWidth={2.5} />
@@ -2914,7 +3288,7 @@ function FormularioLancamento({
                   setData(e.target.value);
                   setShowCalendar(false);
                 }}
-                className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none font-medium text-sm mb-3 focus:ring-4 ring-blue-500/10 border border-gray-100 dark:border-gray-800 transition-all "
+                className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none font-medium text-sm mb-3 focus:ring-4 ring-primary-500/10 border border-gray-100 dark:border-gray-800 transition-all "
                 style={{ colorScheme: isDarkMode ? "dark" : "light" }}
               />
               <button
