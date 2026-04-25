@@ -368,12 +368,6 @@ const ModalPage = ({
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-400 rounded-xl transition-colors"
-          >
-            <X size={20} />
-          </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar pb-12">
           <div className="max-w-xl mx-auto w-full">
@@ -1660,26 +1654,31 @@ export default function App() {
                       transition={{ delay: 0.2 }}
                       className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm"
                     >
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs font-semibold text-gray-500  tracking-wider">
-                          Fluxo (7 Dias)
-                        </h3>
-                        <div className="flex gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-primary-500 rounded-full" />
-                            <span className="text-[11px] font-medium text-gray-400 ">
+                      <div className="flex justify-between items-center mb-6">
+                        <div>
+                          <h3 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] leading-none mb-1">
+                            Dinâmica Semanal
+                          </h3>
+                          <h4 className="text-sm font-black text-gray-900 dark:text-white tracking-tight leading-none">
+                            Fluxo (7 Dias)
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-4 bg-gray-50 dark:bg-white/5 py-1.5 px-3 rounded-full">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 bg-primary-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                            <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest ">
                               Ganhos
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-red-400 rounded-full" />
-                            <span className="text-[11px] font-medium text-gray-400 ">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                            <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest ">
                               Gastos
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className="h-[220px] w-full outline-none focus:outline-none mt-2">
+                      <div className="h-[240px] w-full outline-none focus:outline-none mt-2">
                         <ResponsiveContainer
                           width="100%"
                           height="100%"
@@ -1751,18 +1750,18 @@ export default function App() {
                               </linearGradient>
                             </defs>
                             <CartesianGrid
-                              strokeDasharray="3 3"
-                              vertical={false}
-                              strokeOpacity={isDarkMode ? 0.05 : 0.15}
-                              stroke={isDarkMode ? "#ffffff" : "#cbd5e1"}
+                              strokeDasharray="4 4"
+                              vertical={true}
+                              strokeOpacity={isDarkMode ? 0.05 : 0.08}
+                              stroke={isDarkMode ? "#ffffff" : "#000000"}
                             />
                             <XAxis
                               dataKey="diaSemana"
                               axisLine={false}
                               tickLine={false}
                               tick={{
-                                fontSize: 10,
-                                fontWeight: 500,
+                                fontSize: 9,
+                                fontWeight: 900,
                                 fill: "#9CA3AF",
                               }}
                               dy={15}
@@ -1774,28 +1773,28 @@ export default function App() {
                               }
                             />
                             <Area
-                              type="monotoneX"
+                              type="monotone"
                               dataKey="receitas"
-                              stroke="#2563EB"
-                              strokeWidth={3}
+                              stroke="#3B82F6"
+                              strokeWidth={4}
                               fillOpacity={1}
                               fill="url(#colorRec)"
                               name="Receitas"
                               isAnimationActive={true}
-                              animationDuration={1200}
-                              activeDot={{ r: 6, fill: '#2563EB', stroke: '#fff', strokeWidth: 2 }}
+                              animationDuration={1500}
+                              activeDot={{ r: 6, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
                             />
                             <Area
-                              type="monotoneX"
+                              type="monotone"
                               dataKey="despesas"
-                              stroke="#DC2626"
-                              strokeWidth={3}
+                              stroke="#F43F5E"
+                              strokeWidth={4}
                               fillOpacity={1}
                               fill="url(#colorDesp)"
                               name="Despesas"
                               isAnimationActive={true}
-                              animationDuration={1200}
-                              activeDot={{ r: 6, fill: '#DC2626', stroke: '#fff', strokeWidth: 2 }}
+                              animationDuration={1500}
+                              activeDot={{ r: 6, fill: '#F43F5E', stroke: '#fff', strokeWidth: 2 }}
                             />
                             <Area
                               type="monotoneX"
@@ -1824,15 +1823,27 @@ export default function App() {
                         setIsReceitasModalOpen(true);
                       }}
                     >
-                      <div className="flex justify-between items-center mb-4">
+                      <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-xs font-semibold text-gray-500  tracking-wider group-hover:text-green-500 transition-colors">
-                            Por Fonte
-                          </h3>
+                          <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-white/5 flex items-center justify-center">
+                            <Briefcase size={16} className="text-emerald-500" />
+                          </div>
+                          <div>
+                            <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] leading-none mb-1">
+                              Origem
+                            </h3>
+                            <h4 className="text-sm font-black text-gray-900 dark:text-white tracking-tight leading-none group-hover:text-emerald-500 transition-colors">
+                              Por Fonte
+                            </h4>
+                          </div>
                         </div>
-                        <ListIcon size={16} className="text-gray-400 group-hover:text-green-500 transition-colors" />
+                        <ListIcon size={16} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
                       </div>
-                      <div className="h-[220px] w-full outline-none focus:outline-none mt-2">
+                      <div className="h-[240px] w-full outline-none focus:outline-none mt-2 relative">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-4">
+                           <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total</span>
+                           <span className="text-base font-black text-gray-900 dark:text-white display-font leading-none">{formatarMoeda(resumoMes.receitas)}</span>
+                        </div>
                         <ResponsiveContainer
                           width="100%"
                           height="100%"
@@ -1841,19 +1852,19 @@ export default function App() {
                           <PieChart>
                             <defs>
                               <linearGradient id="pie1" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#2563EB" />
+                                <stop offset="0%" stopColor="#3B82F6" />
                                 <stop offset="100%" stopColor="#60A5FA" />
                               </linearGradient>
                               <linearGradient id="pie2" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#059669" />
+                                <stop offset="0%" stopColor="#10B981" />
                                 <stop offset="100%" stopColor="#34D399" />
                               </linearGradient>
                               <linearGradient id="pie3" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#D97706" />
+                                <stop offset="0%" stopColor="#F59E0B" />
                                 <stop offset="100%" stopColor="#FBBF24" />
                               </linearGradient>
                               <linearGradient id="pie4" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#7C3AED" />
+                                <stop offset="0%" stopColor="#8B5CF6" />
                                 <stop offset="100%" stopColor="#A78BFA" />
                               </linearGradient>
                             </defs>
@@ -1861,14 +1872,14 @@ export default function App() {
                               data={receitaPorFonte}
                               cx="50%"
                               cy="50%"
-                              innerRadius={30}
-                              outerRadius={50}
-                              paddingAngle={6}
+                              innerRadius={55}
+                              outerRadius={75}
+                              paddingAngle={8}
                               dataKey="valor"
                               isAnimationActive={true}
                               animationDuration={1500}
                               stroke="none"
-                              cornerRadius={4}
+                              cornerRadius={8}
                             >
                               {receitaPorFonte.map((_, index) => (
                                 <Cell
@@ -1902,18 +1913,27 @@ export default function App() {
                     transition={{ delay: 0.22 }}
                     className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm"
                   >
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xs font-semibold text-gray-500  tracking-wider">
-                        Atingimento de Meta
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-primary-500 rounded-full" />
-                        <span className="text-[11px] font-medium text-gray-400  tracking-widest">
-                          Meta: {formatarMoeda(metaDiaria)}
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center">
+                          <Target size={20} className="text-orange-500" />
+                        </div>
+                        <div>
+                          <h3 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-0.5">Performance</h3>
+                          <h4 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Atingimento de Meta</h4>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-1.5 text-primary-500">
+                          <div className="w-2 h-2 bg-current rounded-full animate-pulse shadow-[0_0_8px_currentColor]" />
+                          <span className="text-[10px] font-black uppercase tracking-widest leading-none">Meta Ativa</span>
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-tighter">
+                          {formatarMoeda(metaDiaria)} / dia
                         </span>
                       </div>
                     </div>
-                    <div className="h-[220px] w-full outline-none focus:outline-none mt-2">
+                    <div className="h-[240px] w-full outline-none focus:outline-none mt-2">
                       <ResponsiveContainer
                         width="100%"
                         height="100%"
@@ -1930,18 +1950,32 @@ export default function App() {
                               <stop offset="100%" stopColor="#D97706" />
                             </linearGradient>
                           </defs>
+                          <ReferenceLine 
+                            y={metaDiaria} 
+                            stroke="#6B7280" 
+                            strokeDasharray="4 4" 
+                            strokeOpacity={0.4} 
+                            label={{ 
+                              position: 'top', 
+                              value: 'VALOR META', 
+                              fill: '#9CA3AF', 
+                              fontSize: 8, 
+                              fontWeight: 900,
+                              offset: 10
+                            }} 
+                          />
                           <XAxis
                             dataKey="dia"
                             axisLine={false}
                             tickLine={false}
                             tick={{
-                              fontSize: 10,
-                              fontWeight: 500,
+                              fontSize: 9,
+                              fontWeight: 900,
                               fill: "#9CA3AF",
                             }}
                             dy={15}
                           />
-                          <YAxis hide />
+                          <YAxis hide domain={[0, (dataMax: number) => Math.max(dataMax * 1.2, metaDiaria * 1.1)]} />
                           <ReTooltip
                             content={<CustomTooltip isDarkMode={isDarkMode} />}
                             cursor={{
@@ -1949,18 +1983,19 @@ export default function App() {
                               radius: 12,
                             }}
                           />
-                          <ReferenceLine
-                            y={metaDiaria}
-                            stroke={isDarkMode ? "#374151" : "#D1D5DB"}
-                            strokeDasharray="3 3"
-                            strokeWidth={2}
-                          />
                           <Bar
                             dataKey="valor"
-                            radius={[6, 6, 0, 0]}
+                            radius={[8, 8, 0, 0]}
                             barSize={32}
                             isAnimationActive={true}
                             animationBegin={100}
+                            label={{ 
+                              position: 'top', 
+                              fill: isDarkMode ? '#9CA3AF' : '#6B7280', 
+                              fontSize: 9, 
+                              fontWeight: 900,
+                              formatter: (val: number) => val > 0 ? `R$${val.toFixed(0)}` : ''
+                            }}
                           >
                             {metaFulfillment.map((entry, index) => (
                               <Cell
