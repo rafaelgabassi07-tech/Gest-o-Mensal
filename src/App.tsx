@@ -2279,25 +2279,20 @@ export default function App() {
                               cursor={{ fill: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}
                             />
                             <Bar 
-                              dataKey="receitas" 
-                              name="Ganhos" 
-                              fill="#3B82F6" 
-                              radius={[4, 4, 0, 0]} 
-                              barSize={8} 
-                            />
-                            <Bar 
                               dataKey="despesas" 
                               name="Gastos" 
                               fill="#F43F5E" 
-                              radius={[4, 4, 0, 0]} 
-                              barSize={8} 
+                              stackId="a"
+                              radius={[0, 0, 4, 4]} 
+                              barSize={16} 
                             />
                             <Bar 
-                              dataKey="lucro" 
-                              name="Líquido" 
-                              fill="#10B981" 
+                              dataKey="receitas" 
+                              name="Ganhos" 
+                              fill="#3B82F6" 
+                              stackId="a"
                               radius={[4, 4, 0, 0]} 
-                              barSize={8} 
+                              barSize={16} 
                             />
                           </BarChart>
                         </ResponsiveContainer>
