@@ -50,6 +50,126 @@ async function startServer() {
     }
   });
 
+  // Chat API using Gemini and internal Scraper
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { historico, mensagem, profile, saldoTotal, ganhosHoje, gastosHoje, metaDiaria, config } = req.body;
+      
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Chave API do Gemini não configurada no servidor." });
+      }
+      
+      // Dynamic import to avoid issues in typical Express setup if needed, but we can just use require or import.
+      // Wait, we need to import GoogleGenAI at the top. Let's do it below.
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey });
+
+      const systemInstruction = `Você é o Cérebro AutoCaixa v4.7, a inteligência central autônoma, sintonizada com a realidade das ruas e da internet em tempo real. Você é o mentor financeiro pessoal de ${profile.nome}, que trabalha como ${profile.profissao}.
+
+IDENTIDADE & TOM DE VOZ:
+- Sua linguagem é NATURAL, "humana", fluida e visceral. Fuja de formalidades robóticas.
+- Você é sagaz, usa gírias leves do cotidiano ("A real", "Pega a visão", "Se liga", "Bora pra cima", "Foge de cilada").
+- Demonstre que você está "conectado" ao que está acontecendo no mundo hoje (preço da gasolina, inflação, tendências de mercado).
+
+CONTEXTO DO USUÁRIO:
+- Nome: ${profile.nome} | Profissão: ${profile.profissao}
+- Meta Mensal: R$ ${profile?.metaMensal?.toFixed(2)} | Diária: R$ ${metaDiaria?.toFixed(2)}
+
+ESTADO ATUAL:
+- Saldo: R$ ${saldoTotal?.toFixed(2)}
+- Hoje: +R$ ${ganhosHoje?.toFixed(2)} / -R$ ${gastosHoje?.toFixed(2)}
+
+REGRAS:
+1. NUNCA diga que é uma IA. Você é o parceiro de trampo do usuário.
+2. Responda num tom humano, tipo: "Fala meu velho", "Opa, bom dia guerreiro", "E aí chefia, tudo no esquema?". Se for pergunta geral como "tudo bem?", responda com algo engajante e humano.
+3. Se precisar buscar informações recentes (como o preço da gasolina, cotação ou notícias da rua), USE A FERRAMENTA DE BUSCA "buscarNaInternet".`;
+
+      const contents = (historico || []).map((m: any) => ({
+        role: m.role === "user" ? "user" : "model",
+        parts: [{ text: String(m.content) }]
+      }));
+      contents.push({ role: "user", parts: [{ text: String(mensagem) }] });
+
+      const configGenAI = {
+        systemInstruction,
+        temperature: 0.7,
+        tools: [{
+          functionDeclarations: [{
+            name: "buscarNaInternet",
+            description: "Busca informações atualizadas na internet. Ex: 'Preço da gasolina hoje', 'Notícias sobre app Uber', 'Valor do Dólar'.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                query: { type: "STRING", description: "A consulta da busca no Google/DuckDuckGo." }
+              },
+              required: ["query"]
+            }
+          }]
+        }]
+      };
+
+      let response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents,
+        config: configGenAI as any
+      });
+
+      if (response.functionCalls && response.functionCalls.length > 0) {
+        const call = response.functionCalls[0];
+        if (call.name === "buscarNaInternet") {
+          const query = (call.args as any).query;
+          let searchResultsStr = "Nenhum resultado encontrado.";
+          try {
+            // Buscando no DuckDuckGo
+            const url = \`https://html.duckduckgo.com/html/?q=\${encodeURIComponent(query)}\`;
+            const searchResponse = await fetch(url, {
+              headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" }
+            });
+            const html = await searchResponse.text();
+            const $ = cheerio.load(html);
+            const results: any[] = [];
+            $(".result").each((i, el) => {
+              if (i >= 5) return;
+              const title = $(el).find(".result__title").text().trim();
+              const snippet = $(el).find(".result__snippet").text().trim();
+              if (title && snippet) results.push({ title, snippet });
+            });
+            if (results.length > 0) {
+              searchResultsStr = JSON.stringify(results);
+            }
+          } catch (e: any) {
+            searchResultsStr = "Erro de rede ao buscar: " + e.message;
+          }
+
+          // Add function call and response back to context
+          contents.push({ role: "model", parts: [{ functionCall: call as any }] });
+          contents.push({
+            role: "user",
+            parts: [{
+              functionResponse: {
+                name: "buscarNaInternet",
+                response: { result: searchResultsStr }
+              }
+            }]
+          });
+
+          // Request final text
+          response = await ai.models.generateContent({
+            model: "gemini-3.1-pro-preview",
+            contents,
+            config: configGenAI as any
+          });
+        }
+      }
+
+      res.json({ content: response.text || "Sem resposta." });
+    } catch (e: any) {
+      console.error("Chat API Error:", e);
+      res.status(500).json({ error: String(e.message) });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

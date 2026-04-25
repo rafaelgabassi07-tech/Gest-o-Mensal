@@ -53,35 +53,36 @@ export async function responderChat(
   historico: AIChatMessage[] = [],
 ): Promise<AIChatMessage> {
   try {
-    let searchResults = "Nenhum resultado encontrado para a sua busca.";
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(mensagem)}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" }
-      });
-      const textResponse = await res.text();
-      if (!res.ok) {
-        throw new Error(`HTTP Error ${res.status}: ${textResponse}`);
-      }
-      const data = JSON.parse(textResponse);
-      
-      if (data.results && data.results.length > 0) {
-        searchResults = "Aqui estão os resultados que encontrei na web:\n\n" + data.results.map((r: any) => `* **${r.title}**: ${r.snippet}\n(${r.link})`).join("\n\n");
-      }
-    } catch (e: any) {
-      searchResults = "Não foi possível acessar a internet no momento: " + e.message;
+    const hojeStr = new Date().toISOString().split("T")[0];
+    const transacoesHoje = transacoes.filter(t => t.data === hojeStr);
+    const ganhosHoje = transacoesHoje.filter(t => t.tipo === "receita").reduce((a, b) => a + b.valor, 0);
+    const gastosHoje = transacoesHoje.filter(t => t.tipo === "despesa").reduce((a, b) => a + b.valor, 0);
+    const saldoTotal = transacoes.reduce((acc, t) => acc + (t.tipo === "receita" ? t.valor : -t.valor), 0);
+
+    const rs = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ historico, mensagem, profile, saldoTotal, ganhosHoje, gastosHoje, metaDiaria, config })
+    });
+    
+    if (!rs.ok) {
+        const txt = await rs.text();
+        throw new Error(`Erro API: ${rs.status} - ${txt}`);
     }
+
+    const data = await rs.json();
+    const content = data.content;
 
     return {
       role: "assistant",
-      content: searchResults,
-      sentiment: analisarSentimento(searchResults)
+      content: content,
+      sentiment: analisarSentimento(content)
     };
   } catch (error: any) {
-    console.error("Erro na IA:", error);
+    console.error("Erro no chat:", error);
     return {
       role: "assistant",
-      content: `[ERRO TÉCNICO INTERNO]: ${error?.message || error}.`,
+      content: `Deu ruim na conexão aqui. Tenta mandar novamente em uns segundos. Detalhe: ${error?.message || error}`,
       sentiment: "neutro"
     };
   }
