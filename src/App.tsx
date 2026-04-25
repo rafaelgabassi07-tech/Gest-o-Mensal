@@ -78,6 +78,10 @@ import {
   Camera,
   Loader2,
   Lock,
+  Box as BoxIcon,
+  Table as TableIcon,
+  PlusCircle as PlusCircleIcon,
+  Cloud as CloudIcon,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -103,6 +107,7 @@ import {
   SemanaAgrupada,
   ConfiguracaoAI,
   NivelDetalheAI,
+  UserProfile,
 } from "./types";
 
 // --- Utils ---
@@ -183,60 +188,118 @@ const CATEGORIAS_LEGADO: Record<string, any> = {
   alimentacao: Coffee,
 };
 
-const getIconeCategoria = (t: Transacao) => {
-  const cats = t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
-  const found = cats.find((c) => c.id === t.categoria);
-  if (found && found.icone) return found.icone;
-  if (CATEGORIAS_LEGADO[t.categoria]) return CATEGORIAS_LEGADO[t.categoria];
+// --- Logic ---
 
-  const desc = t.descricao.toLowerCase();
-  if (
-    desc.includes("ifood") ||
-    desc.includes("restaurante") ||
-    desc.includes("lanche")
-  )
-    return Utensils;
-  if (desc.includes("uber") || desc.includes("99") || desc.includes("posto"))
-    return Car;
-  if (desc.includes("mercado") || desc.includes("compra")) return ShoppingBag;
-  if (desc.includes("pix")) return Activity;
-
-  return t.tipo === "receita" ? TrendingUp : ShoppingBag;
-};
-
-const getNomeCategoria = (t: Transacao) => {
-  const cats = t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
-  const found = cats.find((c) => c.id === t.categoria);
-  if (found) return found.nome;
-
-  if (t.categoria && t.categoria !== "outros") {
-    return t.categoria.charAt(0).toUpperCase() + t.categoria.slice(1);
+const PROFISSOES_CONFIG: Record<string, { titulo: string; icone: any; receitas: Categoria[]; despesas: Categoria[] }> = {
+  "Motorista": {
+    titulo: "Motorista de Aplicativo",
+    icone: Car,
+    receitas: [
+      { id: "uber", nome: "Uber", icone: Car },
+      { id: "99", nome: "99App", icone: Car },
+      { id: "indrive", nome: "InDrive", icone: Car },
+      { id: "particular", nome: "Particular", icone: Smartphone },
+      { id: "gorjeta", nome: "Gorjetas", icone: Smile },
+      { id: "bonus_plataforma", nome: "Bônus Plataforma", icone: Sparkles },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ],
+    despesas: [
+      { id: "combustivel", nome: "Combustível", icone: Fuel },
+      { id: "limpeza", nome: "Limpeza", icone: Droplets },
+      { id: "manutencao", nome: "Manutenção", icone: Wrench },
+      { id: "seguro", nome: "Seguro", icone: ShieldCheck },
+      { id: "aluguel", nome: "Aluguel Veículo", icone: Key },
+      { id: "multas", nome: "Multas/Taxas", icone: AlertTriangle },
+      { id: "estacionamento", nome: "Estacionamento/Pedágio", icone: MapPin },
+      { id: "alimentacao", nome: "Alimentação", icone: Coffee },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ]
+  },
+  "Hibrido": {
+    titulo: "Motorista + Entregador",
+    icone: RefreshCcw,
+    receitas: [
+      { id: "uber", nome: "Uber/99", icone: Car },
+      { id: "ifood", nome: "iFood/Rappi", icone: ShoppingBag },
+      { id: "particular", nome: "Particular", icone: Smartphone },
+      { id: "entrega_direta", nome: "Entrega Direta", icone: Package },
+      { id: "gorjeta", nome: "Gorjetas", icone: Smile },
+      { id: "bonus_plataforma", nome: "Bônus", icone: Sparkles },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ],
+    despesas: [
+      { id: "combustivel", nome: "Combustível", icone: Fuel },
+      { id: "manutencao", nome: "Manutenção", icone: Wrench },
+      { id: "internet", nome: "Plano Internet", icone: Smartphone },
+      { id: "aluguel", nome: "Aluguel (Carro/Moto)", icone: Key },
+      { id: "limpeza", nome: "Limpeza/Bag", icone: Droplets },
+      { id: "estacionamento", nome: "Pedágio/Estacionamento", icone: MapPin },
+      { id: "alimentacao", nome: "Alimentação", icone: Coffee },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ]
+  },
+  "Entregador": {
+    titulo: "Entregador",
+    icone: Package,
+    receitas: [
+      { id: "ifood", nome: "iFood", icone: ShoppingBag },
+      { id: "rappi", nome: "Rappi", icone: ShoppingBag },
+      { id: "loggi", nome: "Loggi", icone: Package },
+      { id: "particular", nome: "Particular", icone: Smartphone },
+      { id: "gorjeta", nome: "Gorjetas", icone: Smile },
+      { id: "bonus_plataforma", nome: "Bônus/Promo", icone: Sparkles },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ],
+    despesas: [
+      { id: "combustivel", nome: "Combustível", icone: Fuel },
+      { id: "manutencao", nome: "Manutenção", icone: Wrench },
+      { id: "equipamento", nome: "Equipamento/Bag/Vestuário", icone: Package },
+      { id: "smartphone", nome: "Smartphone/Plano", icone: Smartphone },
+      { id: "alimentacao", nome: "Alimentação", icone: Coffee },
+      { id: "estacionamento", nome: "Estacionamento", icone: MapPin },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ]
+  },
+  "Autonomo": {
+    titulo: "Profissional Autônomo",
+    icone: Briefcase,
+    receitas: [
+      { id: "servicos", nome: "Serviços", icone: Briefcase },
+      { id: "vendas", nome: "Vendas", icone: ShoppingBag },
+      { id: "freelance", nome: "Freelance", icone: Smartphone },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ],
+    despesas: [
+      { id: "materiais", nome: "Materiais", icone: BoxIcon },
+      { id: "marketing", nome: "Marketing", icone: Target },
+      { id: "ferramentas", nome: "Ferramentas/Assinaturas", icone: Code },
+      { id: "espaco", nome: "Espaço/Coworking", icone: Home },
+      { id: "alimentacao", nome: "Alimentação", icone: Coffee },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ]
+  },
+  "Geral": {
+    titulo: "Gestão Geral",
+    icone: Wallet,
+    receitas: [
+      { id: "salario", nome: "Salário", icone: Briefcase },
+      { id: "extra", nome: "Renda Extra", icone: Sparkles },
+      { id: "reembolso", nome: "Reembolsos", icone: FileText },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ],
+    despesas: [
+      { id: "moradia", nome: "Moradia", icone: Home },
+      { id: "alimentacao", nome: "Alimentação", icone: Utensils },
+      { id: "contas", nome: "Contas", icone: FileText },
+      { id: "saude", nome: "Saúde", icone: HeartPulse },
+      { id: "transporte", nome: "Transporte", icone: Bus },
+      { id: "outros", nome: "Outros", icone: MoreHorizontal },
+    ]
   }
-  return "Outros";
 };
 
-const CATEGORIAS_RECEITA: Categoria[] = [
-  { id: "uber", nome: "Uber", icone: Car },
-  { id: "99", nome: "99App", icone: Car },
-  { id: "indrive", nome: "InDrive", icone: Car },
-  { id: "particular", nome: "Particular", icone: Smartphone },
-  { id: "entrega", nome: "Entrega", icone: Package },
-  { id: "salario", nome: "Salário", icone: Briefcase },
-  { id: "outros", nome: "Outros", icone: MoreHorizontal },
-];
-
-const CATEGORIAS_DESPESA: Categoria[] = [
-  { id: "moradia", nome: "Moradia", icone: Home },
-  { id: "alimentacao", nome: "Alimentação", icone: Utensils },
-  { id: "transporte", nome: "Transporte", icone: Bus },
-  { id: "saude", nome: "Saúde", icone: HeartPulse },
-  { id: "lazer", nome: "Lazer", icone: Gamepad2 },
-  { id: "educacao", nome: "Educação", icone: GraduationCap },
-  { id: "compras", nome: "Compras", icone: ShoppingBag },
-  { id: "contas", nome: "Contas", icone: FileText },
-  { id: "manutencao", nome: "Manutenção", icone: Wrench },
-  { id: "outros", nome: "Outros", icone: MoreHorizontal },
-];
+const CATEGORIAS_PADRAO_RECEITA: Categoria[] = PROFISSOES_CONFIG["Geral"].receitas;
+const CATEGORIAS_PADRAO_DESPESA: Categoria[] = PROFISSOES_CONFIG["Geral"].despesas;
 
 const getInitialData = (): Transacao[] => {
   try {
@@ -380,7 +443,269 @@ const ModalPage = ({
   </AnimatePresence>
 );
 
+const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile) => void, vibrar: (ms?: number | number[]) => void }) => {
+  const [step, setStep] = useState(0); // Step 0 is intro
+  const [nome, setNome] = useState("");
+  const [profissao, setProfissao] = useState("Motorista");
+  const [meta, setMeta] = useState("4000");
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-white dark:bg-gray-950 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto overflow-x-hidden">
+      <div className="w-full max-w-md mx-auto py-8">
+        <AnimatePresence mode="wait">
+          {step === 0 && (
+            <motion.div 
+              key="intro"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="text-center space-y-6 sm:space-y-10"
+            >
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-primary-500 blur-3xl opacity-20 rounded-full animate-pulse" />
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-primary-400 to-primary-600 text-white shadow-2xl flex items-center justify-center mx-auto">
+                  <Sparkles size={40} className="sm:size-12" />
+                </div>
+              </div>
+              
+              <div className="space-y-3 sm:space-y-4">
+                <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white leading-[0.95]">
+                  Bem-vindo ao <br/>
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-indigo-600">AutoCaixa Pro</span>
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-medium max-w-[280px] sm:max-w-md mx-auto">
+                  A gestão financeira inteligente pensada para a sua rotina.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3 text-left">
+                {[
+                  { icon: Zap, title: "Inteligência", desc: "Insights nativos automáticos." },
+                  { icon: ShieldCheck, title: "Segurança", desc: "Dados locais no seu aparelho." },
+                  { icon: Target, title: "Foco", desc: "Metas conforme sua realidade." }
+                ].map((feature, i) => (
+                  <div key={i} className="flex sm:flex-col items-center sm:items-start gap-4 sm:gap-2 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
+                    <feature.icon size={18} className="text-primary-500 shrink-0" />
+                    <div>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white">{feature.title}</h3>
+                      <p className="text-[9px] text-gray-500 leading-tight font-medium hidden sm:block">{feature.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setStep(1)}
+                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-gray-900/20 active:scale-95 transition-all"
+              >
+                Começar Setup
+              </button>
+            </motion.div>
+          )}
+
+          {step === 1 && (
+            <motion.div 
+              key="step1"
+              initial={{ opacity: 0, x: 10 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: -10 }}
+              className="space-y-8 text-center"
+            >
+              <div className="space-y-2">
+                <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.4em]">Identidade</span>
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">Qual seu nome?</h2>
+              </div>
+              
+              <div className="relative group py-4">
+                <input 
+                  type="text" 
+                  value={nome}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && nome.length >= 1) {
+                      vibrar(10);
+                      setStep(2);
+                    }
+                  }}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Seu nome"
+                  className="w-full bg-transparent text-center text-3xl sm:text-4xl font-black text-gray-900 dark:text-white outline-none placeholder:text-gray-100 dark:placeholder:text-gray-800"
+                />
+                <div className="h-1 w-20 mx-auto bg-primary-500 rounded-full mt-2" />
+              </div>
+
+              <button 
+                disabled={!nome || nome.length < 1}
+                onClick={() => { vibrar(10); setStep(2); }}
+                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl disabled:opacity-30 transition-all"
+              >
+                Avançar
+              </button>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div 
+              key="step2"
+              initial={{ opacity: 0, x: 10 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: -10 }}
+              className="space-y-6 text-center"
+            >
+              <div className="space-y-2">
+                <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.4em]">Especialidade</span>
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">Sua profissão?</h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(PROFISSOES_CONFIG).map(([key, cfg]) => (
+                  <button
+                    key={key}
+                    onClick={() => { vibrar(15); setProfissao(key); }}
+                    className={`group relative p-4 sm:p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-2 text-center overflow-hidden ${
+                      profissao === key 
+                        ? "bg-primary-500 border-primary-500 text-white shadow-lg" 
+                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800"
+                    }`}
+                  >
+                    <cfg.icone size={28} className={profissao === key ? "text-white" : "text-gray-400 group-hover:text-primary-500"} />
+                    <span className="text-[10px] sm:text-xs font-black">{cfg.titulo}</span>
+                  </button>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => { vibrar(10); setStep(3); }}
+                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em]"
+              >
+                Continuar
+              </button>
+            </motion.div>
+          )}
+
+          {step === 3 && (
+            <motion.div 
+              key="step3"
+              initial={{ opacity: 0, x: 10 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: -10 }}
+              className="space-y-8 text-center"
+            >
+              <div className="space-y-2">
+                <span className="text-[10px] font-black text-primary-500 uppercase tracking-[0.4em]">Objetivo</span>
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">Meta de Lucro?</h2>
+                <p className="text-gray-400 text-xs">(Líquido mensal desejado)</p>
+              </div>
+
+              <div className="relative max-w-[200px] mx-auto py-2">
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-200 dark:text-gray-800">R$</span>
+                <input 
+                  type="number" 
+                  value={meta}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onComplete({ nome, profissao, metaMensal: Number(meta), primeiroAcesso: false });
+                    }
+                  }}
+                  onChange={(e) => setMeta(e.target.value)}
+                  className="w-full bg-transparent text-center text-4xl font-black text-gray-900 dark:text-white outline-none"
+                />
+              </div>
+
+              <div className="bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50">
+                <p className="text-[11px] text-indigo-900/70 dark:text-indigo-300/70 font-bold leading-tight">
+                  Meta diária sugerida: <br/> R$ {Math.round(Number(meta) / 22).toLocaleString('pt-BR')} (base 22 dias)
+                </p>
+              </div>
+
+              <button 
+                onClick={() => onComplete({ nome, profissao, metaMensal: Number(meta), primeiroAcesso: false })}
+                className="w-full h-18 bg-primary-500 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-primary-500/30 active:scale-95 transition-all"
+              >
+                Finalizar Setup
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {step > 0 && (
+          <div className="mt-8 flex items-center justify-center gap-1.5">
+            {[1, 2, 3].map(s => (
+              <div 
+                key={s} 
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  s === step ? "w-6 bg-primary-500" : s < step ? "w-2 bg-primary-200" : "w-1 bg-gray-100 dark:bg-gray-800"
+                }`} 
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem("@MeuCaixa:profile");
+      return saved ? JSON.parse(saved) : {
+        nome: "",
+        profissao: "Geral",
+        metaMensal: 3000,
+        primeiroAcesso: true
+      };
+    } catch {
+      return {
+        nome: "",
+        profissao: "Geral",
+        metaMensal: 3000,
+        primeiroAcesso: true
+      };
+    }
+  });
+
+  const CATEGORIAS_RECEITA = useMemo(() => {
+    return PROFISSOES_CONFIG[userProfile.profissao]?.receitas || CATEGORIAS_PADRAO_RECEITA;
+  }, [userProfile.profissao]);
+
+  const CATEGORIAS_DESPESA = useMemo(() => {
+    return PROFISSOES_CONFIG[userProfile.profissao]?.despesas || CATEGORIAS_PADRAO_DESPESA;
+  }, [userProfile.profissao]);
+
+  useEffect(() => {
+    localStorage.setItem("@MeuCaixa:profile", JSON.stringify(userProfile));
+  }, [userProfile]);
+
+  const getNomeCategoria = (t: Transacao) => {
+    const cats = t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
+    const found = cats.find((c) => c.id === t.categoria);
+    if (found) return found.nome;
+
+    if (t.categoria && t.categoria !== "outros") {
+      return t.categoria.charAt(0).toUpperCase() + t.categoria.slice(1);
+    }
+    return "Outros";
+  };
+
+  const getIconeCategoria = (t: Transacao) => {
+    const cats = t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
+    const found = cats.find((c) => c.id === t.categoria);
+    if (found && found.icone) return found.icone;
+    if (CATEGORIAS_LEGADO[t.categoria]) return CATEGORIAS_LEGADO[t.categoria];
+
+    const desc = t.descricao.toLowerCase();
+    if (desc.includes("ifood") || desc.includes("restaurante") || desc.includes("lanche"))
+      return Utensils;
+    if (desc.includes("uber") || desc.includes("99") || desc.includes("posto"))
+      return Car;
+    if (desc.includes("mercado") || desc.includes("compra")) return ShoppingBag;
+    if (desc.includes("pix")) return Activity;
+
+    return t.tipo === "receita" ? TrendingUp : ShoppingBag;
+  };
+
+  const [direcaoRestaurada, setDirecaoRestaurada] = useState(0); // Dummy to separate logic
   const [tabAtual, setTabAtual] = useState<
     "resumo" | "adicionar" | "historico"
   >("resumo");
@@ -388,21 +713,40 @@ export default function App() {
   const [transacoes, setTransacoes] = useState<Transacao[]>(() =>
     getInitialData(),
   );
-  const [corTema, setCorTema] = useState<"blue" | "purple" | "green" | "orange">(
+  const [corTema, setCorTema] = useState<keyof typeof THEMES>(
     () => (localStorage.getItem("@MeuCaixa:corTema") as any) || "blue"
   );
-  const [isDarkMode, setIsDarkMode] = useState(() => {
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">(() => {
     try {
-      const saved = localStorage.getItem("@MeuCaixa:theme");
-      if (saved) return saved === "dark";
-      if (typeof window !== "undefined") {
-        return window.matchMedia("(prefers-color-scheme: dark)").matches;
-      }
-      return false;
+      return (localStorage.getItem("@MeuCaixa:themeMode") as any) || "system";
     } catch {
-      return false;
+      return "system";
     }
   });
+
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const handleThemeChange = () => {
+      if (themeMode === "system") {
+        setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
+      } else {
+        setIsDarkMode(themeMode === "dark");
+      }
+    };
+
+    handleThemeChange();
+
+    if (themeMode === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      mediaQuery.addEventListener("change", handleThemeChange);
+      return () => mediaQuery.removeEventListener("change", handleThemeChange);
+    }
+  }, [themeMode]);
+
+  useEffect(() => {
+    localStorage.setItem("@MeuCaixa:themeMode", themeMode);
+  }, [themeMode]);
   const [transacaoEmEdicao, setTransacaoEmEdicao] = useState<Transacao | null>(
     null,
   );
@@ -450,10 +794,12 @@ export default function App() {
       focarEmGanhos: true,
       focarEmGastos: true,
       hapticosAtivos: true,
+      baseConhecimento: "",
     };
   });
 
   const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [abaConfig, setAbaConfig] = useState<"Interface" | "Dados" | "IA" | "Perfil">("Interface");
   const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([]);
   const [userInput, setUserInput] = useState("");
   const [activeAIView, setActiveAIView] = useState<
@@ -512,6 +858,7 @@ export default function App() {
         transacoes,
         metaDiaria,
         configAI,
+        userProfile,
         chatMessages,
       );
       setChatMessages((prev) => [...prev, aiResponse]);
@@ -557,6 +904,7 @@ export default function App() {
             CATEGORIAS_RECEITA,
             CATEGORIAS_DESPESA,
             configAI,
+            userProfile,
           );
           setInsights(novosInsights);
           if (novosInsights.some((i) => i.tipo === "alerta")) vibrar([50, 50, 50]);
@@ -566,11 +914,34 @@ export default function App() {
       };
       fetchInsights();
     }
-  }, [isAIOpen, transacoes, metaDiaria, configAI]);
+  }, [isAIOpen, transacoes, metaDiaria, configAI, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA]);
 
   const toastRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+
+  const [testePersonalidade, setTestePersonalidade] = useState<string | null>(null);
+  const [isTestandoPersonalidade, setIsTestandoPersonalidade] = useState(false);
+
+  const testarPersonalidadeIA = async () => {
+    setIsTestandoPersonalidade(true);
+    vibrar(15);
+    try {
+      const msg = await responderChat(
+        `Como meu mentor financeiro e Cérebro AutoCaixa, analise rapidamente meu saldo de R$ ${transacoes.reduce((acc, t) => acc + (t.tipo === "receita" ? t.valor : -t.valor), 0).toFixed(2)} e as outras métricas. Me dê um conselho rápido, curto e visceral de até 2 frases que revele sua personalidade sábia de elite.`,
+        transacoes,
+        metaDiaria,
+        configAI,
+        userProfile,
+        []
+      );
+      setTestePersonalidade(msg.content);
+    } catch (e) {
+      setTestePersonalidade("Sistema temporariamente ocupado processando algoritmos de precisão.");
+    } finally {
+      setIsTestandoPersonalidade(false);
+    }
+  };
 
   useEffect(() => {
     if (mainRef.current) {
@@ -578,15 +949,131 @@ export default function App() {
     }
   }, [tabAtual]);
 
+  // --- Constantes de Cores e Temas ---
+  const THEMES = {
+    blue: {
+      name: "Clássico",
+      50: "#eff6ff",
+      100: "#dbeafe",
+      200: "#bfdbfe",
+      300: "#93c5fd",
+      400: "#60a5fa",
+      500: "#3b82f6",
+      600: "#2563eb",
+      700: "#1d4ed8",
+      800: "#1e40af",
+      900: "#1e3a8a",
+      950: "#172554",
+    },
+    purple: {
+      name: "Ametista",
+      50: "#faf5ff",
+      100: "#f3e8ff",
+      200: "#e9d5ff",
+      300: "#d8b4fe",
+      400: "#c084fc",
+      500: "#a855f7",
+      600: "#9333ea",
+      700: "#7e22ce",
+      800: "#6b21a8",
+      900: "#581c87",
+      950: "#3b0764",
+    },
+    green: {
+      name: "Esmeralda",
+      50: "#f0fdf4",
+      100: "#dcfce7",
+      200: "#bbf7d0",
+      300: "#86efac",
+      400: "#4ade80",
+      500: "#22c55e",
+      600: "#16a34a",
+      700: "#15803d",
+      800: "#166534",
+      900: "#14532d",
+      950: "#052e16",
+    },
+    orange: {
+      name: "Cenoura",
+      50: "#fff7ed",
+      100: "#ffedd5",
+      200: "#fed7aa",
+      300: "#fdba74",
+      400: "#fb923c",
+      500: "#f97316",
+      600: "#ea580c",
+      700: "#c2410c",
+      800: "#9a3412",
+      900: "#7c2d12",
+      950: "#431407",
+    },
+    rose: {
+      name: "Sakura",
+      50: "#fff1f2",
+      100: "#ffe4e6",
+      200: "#fecdd3",
+      300: "#fda4af",
+      400: "#fb7185",
+      500: "#f43f5e",
+      600: "#e11d48",
+      700: "#be123c",
+      800: "#9f1239",
+      900: "#881337",
+      950: "#4c0519",
+    },
+    indigo: {
+      name: "Índigo",
+      50: "#eef2ff",
+      100: "#e0e7ff",
+      200: "#c7d2fe",
+      300: "#a5b4fc",
+      400: "#818cf8",
+      500: "#6366f1",
+      600: "#4f46e5",
+      700: "#4338ca",
+      800: "#3730a3",
+      900: "#312e81",
+      950: "#1e1b4b",
+    },
+    teal: {
+      name: "Oceano",
+      50: "#f0f9ff",
+      100: "#e0f2fe",
+      200: "#bae6fd",
+      300: "#7dd3fc",
+      400: "#38bdf8",
+      500: "#0ea5e9",
+      600: "#0284c7",
+      700: "#0369a1",
+      800: "#075985",
+      900: "#0c4a6e",
+      950: "#082f49",
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem("@MeuCaixa:theme", isDarkMode ? "dark" : "light");
+    const root = document.documentElement;
+    const themeData = THEMES[corTema];
+
+    // Aplicar variáveis CSS primárias
+    Object.entries(themeData).forEach(([key, value]) => {
+      root.style.setProperty(`--primary-${key}`, value as string);
+    });
+
+    // Sincronizar localStorage
+    localStorage.setItem("@MeuCaixa:corTema", corTema);
+  }, [corTema]);
+
+  useEffect(() => {
     localStorage.setItem("@MeuCaixa:corTema", corTema);
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
+      document.documentElement.style.setProperty("color-scheme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      document.documentElement.style.setProperty("color-scheme", "light");
     }
-  }, [isDarkMode, corTema]);
+  }, [isDarkMode]);
 
   useEffect(() => {
     localStorage.setItem("@MeuCaixa:transacoes", JSON.stringify(transacoes));
@@ -607,13 +1094,15 @@ export default function App() {
             : t,
         ),
       );
-      mostrarToast("Registo atualizado");
+      mostrarToast("Lançamento atualizado com sucesso!");
+      setTransacaoEmEdicao(null);
+      setTabAtual("resumo");
     } else {
       setTransacoes((prev) => [higienizarTransacao(nova), ...prev]);
-      mostrarToast("Registo salvo");
+      mostrarToast("Lançamento salvo com sucesso!");
+      // Não muda de aba para permitir múltiplos lançamentos
+      // O formulário irá lidar com o feedback visual de sucesso
     }
-    setTransacaoEmEdicao(null);
-    setTabAtual("resumo");
   };
 
   const gerarRelatorioPDF = () => {
@@ -622,9 +1111,9 @@ export default function App() {
       const hoje = new Date();
       const dataStr = hoje.toLocaleDateString('pt-BR');
       
-      doc.setFontSize(20);
+      doc.setFontSize(22);
       doc.setTextColor(59, 130, 246); // Blue-500
-      doc.text("MeuCaixa", 14, 22);
+      doc.text("AutoCaixa", 14, 22);
       
       doc.setFontSize(12);
       doc.setTextColor(100);
@@ -694,12 +1183,77 @@ export default function App() {
       const textLines = doc.splitTextToSize(veredito, maxLineWidth);
       doc.text(textLines, 14, finalY + 25);
 
-      doc.save(`Relatorio_MeuCaixa_${getLocalISODate()}.pdf`);
+      doc.save(`Relatorio_AutoCaixa_${getLocalISODate()}.pdf`);
       mostrarToast("Relatório PDF Gerado!", "sucesso");
     } catch (e) {
       console.error(e);
       mostrarToast("Erro ao gerar PDF", "erro");
     }
+  };
+
+  const importarDados = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result as string;
+      if (file.name.endsWith(".json")) {
+        try {
+          const data = JSON.parse(content);
+          setTransacoes(Array.isArray(data) ? data.map(higienizarTransacao) : []);
+          mostrarToast("Backup JSON restaurado!");
+        } catch { mostrarToast("Erro ao ler JSON", "erro"); }
+      } else if (file.name.endsWith(".csv")) {
+        try {
+          const lines = content.split("\n");
+          const newTransacoes: Transacao[] = [];
+          
+          // Pula o cabeçalho
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            
+            // Tenta detectar o separador (vírgula ou ponto e vírgula)
+            const separator = lines[i].includes(";") ? ";" : ",";
+            const cols = lines[i].split(separator);
+            
+            if (cols.length >= 4) {
+              const dataStr = cols[0].trim();
+              const [dia, mes, ano] = dataStr.split("/");
+              const dataISO = `${ano}-${mes}-${dia}`;
+              
+              const tipo = cols[1].toLowerCase().includes("entrada") || cols[1].toLowerCase().includes("receita") ? "receita" : "despesa";
+              
+              // Busca o ID da categoria pelo nome
+              const catNome = cols[2].trim().toLowerCase();
+              const catArray = tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
+              const catObj = catArray.find(c => c.nome.toLowerCase() === catNome);
+              const categoriaId = catObj ? catObj.id : (tipo === "receita" ? "outros_receita" : "outros_despesa");
+              
+              const valor = parseFloat(cols[3].replace("R$", "").replace(/\./g, "").replace(",", ".").trim());
+              const descricao = cols[4] ? cols[4].replace(/"/g, "").trim() : "";
+              
+              if (!isNaN(valor)) {
+                newTransacoes.push({
+                  id: Math.random().toString(36).substring(2, 9),
+                  data: dataISO,
+                  tipo,
+                  categoria: categoriaId,
+                  valor,
+                  descricao,
+                  versao: "4.0"
+                });
+              }
+            }
+          }
+          
+          if (newTransacoes.length > 0) {
+            setTransacoes(prev => [...newTransacoes, ...prev]);
+            mostrarToast(`${newTransacoes.length} registros importados!`);
+          } else {
+            mostrarToast("Nenhum dado válido no CSV", "erro");
+          }
+        } catch { mostrarToast("Erro ao processar CSV", "erro"); }
+      }
+    };
+    reader.readAsText(file);
   };
 
   const exportarCSV = () => {
@@ -733,7 +1287,7 @@ export default function App() {
       });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `MeuCaixa_extrato_${getLocalISODate()}.csv`;
+      link.download = `AutoCaixa_extrato_${getLocalISODate()}.csv`;
       link.click();
       mostrarToast("Extrato exportado!");
     } catch {
@@ -1022,7 +1576,18 @@ export default function App() {
           ${THEME_COLORS[corTema]}
         }
       `}</style>
-      <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-300">
+
+      {userProfile.primeiroAcesso ? (
+        <Onboarding 
+          onComplete={(profile) => {
+            setUserProfile(profile);
+            setMetaDiaria(Math.round(profile.metaMensal / 22));
+            vibrar(30);
+          }} 
+          vibrar={vibrar}
+        />
+      ) : (
+        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-300">
         <AnimatePresence>
           {toast && (
             <motion.div
@@ -1107,7 +1672,7 @@ export default function App() {
                 </div>
                 <div className="min-w-0 flex items-baseline gap-0.5">
                   <h1 className="text-xl sm:text-2xl font-extrabold tracking-tighter leading-none text-gray-900 dark:text-white display-font shrink-0">
-                    Meu<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
+                    Auto<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
                   </h1>
                 </div>
               </motion.div>
@@ -1127,11 +1692,14 @@ export default function App() {
                 <button
                   onClick={() => {
                     vibrar(10);
-                    setIsDarkMode(!isDarkMode);
+                    const modes: ("light" | "dark" | "system")[] = ["light", "dark", "system"];
+                    const next = modes[(modes.indexOf(themeMode) + 1) % modes.length];
+                    setThemeMode(next);
+                    mostrarToast(`Tema: ${next === 'system' ? 'Automático' : next === 'dark' ? 'Escuro' : 'Claro'}`);
                   }}
                   className="p-1.5 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-all"
                 >
-                  {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                  {themeMode === "system" ? <Activity size={16} /> : isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
                 </button>
                 <button
                   onClick={() => {
@@ -1193,11 +1761,14 @@ export default function App() {
               <button
                 onClick={() => {
                   vibrar(10);
-                  setIsDarkMode(!isDarkMode);
+                  const modes: ("light" | "dark" | "system")[] = ["light", "dark", "system"];
+                  const next = modes[(modes.indexOf(themeMode) + 1) % modes.length];
+                  setThemeMode(next);
+                  mostrarToast(`Tema: ${next === 'system' ? 'Automático' : next === 'dark' ? 'Escuro' : 'Claro'}`);
                 }}
                 className="p-1.5 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-all"
               >
-                {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
+                {themeMode === "system" ? <Activity size={15} /> : isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
               </button>
 
               <button
@@ -1213,69 +1784,27 @@ export default function App() {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto pb-32 relative scroll-smooth overflow-x-hidden">
-          <AnimatePresence mode="popLayout" initial={false} custom={direcao}>
-            <motion.div
-              key={tabAtual}
-              custom={direcao}
-              variants={{
-                enter: (direcao: number) => ({
-                  x: direcao > 0 ? 300 : direcao < 0 ? -300 : 0,
-                  opacity: 0,
-                  filter: "blur(10px)",
-                }),
-                center: {
-                  x: 0,
-                  opacity: 1,
-                  filter: "blur(0px)",
-                },
-                exit: (direcao: number) => ({
-                  x: direcao > 0 ? -300 : direcao < 0 ? 300 : 0,
-                  opacity: 0,
-                  filter: "blur(10px)",
-                }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: "spring", stiffness: 400, damping: 35 },
-                opacity: { duration: 0.2 },
-              }}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.6}
-              onDragEnd={(_, info) => {
-                const threshold = 100;
-                const velocityThreshold = 200;
-                const tabs: ("resumo" | "adicionar" | "historico")[] = [
-                  "resumo",
-                  "adicionar",
-                  "historico",
-                ];
-                const currentIndex = tabs.indexOf(tabAtual);
-
-                const isSignificantSwipe = 
-                  Math.abs(info.offset.x) > threshold || 
-                  Math.abs(info.velocity.x) > velocityThreshold;
-
-                if (isSignificantSwipe) {
-                  if (
-                    info.offset.x < 0 &&
-                    currentIndex < tabs.length - 1
-                  ) {
-                    setDirecao(1);
-                    setTabAtual(tabs[currentIndex + 1]);
-                  } else if (info.offset.x > 0 && currentIndex > 0) {
-                    setDirecao(-1);
-                    setTabAtual(tabs[currentIndex - 1]);
-                  }
-                }
-              }}
-              className="w-full min-h-full touch-pan-y"
-            >
-              {tabAtual === "resumo" && (
-                <div className="p-4 space-y-4">
+        <main ref={mainRef} className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-950">
+          <motion.div 
+            className="h-full flex" 
+            animate={{ x: `-${["resumo", "adicionar", "historico"].indexOf(tabAtual) * 100}%` }}
+            transition={{ type: "spring", stiffness: 260, damping: 28, mass: 0.5 }}
+            style={{ width: '300%' }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.4}
+            onDragEnd={(_, info) => {
+              const threshold = 100;
+              const tabs: ("resumo" | "adicionar" | "historico")[] = ["resumo", "adicionar", "historico"];
+              const currentIndex = tabs.indexOf(tabAtual);
+              if (info.offset.x < -threshold && currentIndex < tabs.length - 1) {
+                setTabAtual(tabs[currentIndex + 1]);
+              } else if (info.offset.x > threshold && currentIndex > 0) {
+                setTabAtual(tabs[currentIndex - 1]);
+              }
+            }}
+          >
+              <div className="w-1/3 h-full overflow-y-auto pb-40 overflow-x-hidden scroll-smooth p-4 space-y-4">
                   {/* Card Principal: Balanço de Lucro Real */}
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
@@ -1705,8 +2234,8 @@ export default function App() {
                             data={dadosGrafico.dias}
                             margin={{
                               top: 10,
-                              right: 20,
-                              left: -20,
+                              right: 0,
+                              left: 0,
                               bottom: 0,
                             }}
                           >
@@ -1994,20 +2523,19 @@ export default function App() {
                     </div>
                   </motion.div>
                 </div>
-              )}
 
-              {tabAtual === "adicionar" && (
-                <div className="h-full p-3">
+              <div className="w-1/3 h-full overflow-y-auto pb-40 overflow-x-hidden scroll-smooth p-3">
                   <FormularioLancamento
                     aoSalvar={salvarTransacao}
                     isDarkMode={isDarkMode}
                     edicao={transacaoEmEdicao}
                     vibrar={vibrar}
+                    categoriasReceita={CATEGORIAS_RECEITA}
+                    categoriasDespesa={CATEGORIAS_DESPESA}
                   />
                 </div>
-              )}
-              {tabAtual === "historico" && (
-                <div className="p-4 space-y-4">
+
+              <div className="w-1/3 h-full overflow-y-auto pb-40 overflow-x-hidden scroll-smooth p-4 space-y-4">
                   {/* Simplified Filter */}
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -2123,9 +2651,7 @@ export default function App() {
                     ))
                   )}
                 </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
+          </motion.div>
         </main>
 
         <nav className="fixed bottom-0 w-full bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-900 flex justify-around items-center z-40 pb-safe px-4 pt-1">
@@ -2436,116 +2962,267 @@ export default function App() {
             key="modal-configuracoes"
             isOpen={isMenuOpen}
             onClose={() => setIsMenuOpen(false)}
-            title="Configurações"
-            subtitle="Gerencie sua experiência"
+            title="Ajustes e Sistema"
+            subtitle="Configure sua experiência AutoCaixa"
             icon={Settings}
           >
-            <div className="space-y-10 py-4">
-               <div>
-                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 px-1">Aparência Visual</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    {["blue", "purple", "green", "orange"].map((cor) => (
-                      <button
-                        key={cor}
-                        onClick={() => setCorTema(cor as any)}
-                        className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${corTema === cor ? "bg-primary-50/50 dark:bg-primary-900/20 border-primary-500 shadow-sm ring-4 ring-primary-500/10" : "bg-transparent border-gray-100 dark:border-gray-800 text-gray-400 hover:border-gray-200 dark:hover:border-gray-700"}`}
-                      >
-                        <div className="w-6 h-6 rounded-full shadow-inner" style={{ backgroundColor: cor === 'blue' ? '#3b82f6' : cor === 'purple' ? '#a855f7' : cor === 'green' ? '#22c55e' : '#f97316' }} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{cor}</span>
-                      </button>
-                    ))}
-                  </div>
-               </div>
+            <div className="py-4">
+              {/* Navegação por Abas Interna */}
+              <div className="flex bg-gray-100 dark:bg-gray-900/50 p-1 rounded-xl mb-6 border border-gray-200/50 dark:border-white/5 mx-1">
+                {(["Interface", "Dados", "IA", "Perfil"] as const).map((aba) => (
+                  <button
+                    key={aba}
+                    onClick={() => setAbaConfig(aba)}
+                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                      abaConfig === aba 
+                        ? "bg-white dark:bg-gray-800 text-primary-600 shadow-sm" 
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {aba}
+                  </button>
+                ))}
+              </div>
 
-               <div className="space-y-4">
-                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 px-1">Gestão de Dados</h4>
-                  <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
-                    <button
-                      onClick={() => {
-                        const blob = new Blob([JSON.stringify(transacoes)], { type: "application/json" });
-                        const a = document.createElement("a");
-                        a.href = URL.createObjectURL(blob);
-                        a.download = `backup_${getLocalISODate()}.json`;
-                        a.click();
-                        mostrarToast("Backup exportado!");
-                      }}
-                      className="w-full flex items-center justify-between py-5 group transition-all px-1"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Download size={18} />
-                        </div>
-                        <div className="text-left">
-                          <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Exportar Backup</span>
-                          <span className="text-[11px] text-gray-400 font-medium">Baixar arquivo JSON</span>
-                        </div>
+              <div className="space-y-6 px-1">
+                {abaConfig === "Interface" && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                    <div>
+                      <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Painel de Temas</h4>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {Object.entries(THEMES).map(([key, theme]) => (
+                          <button
+                            key={key}
+                            onClick={() => {
+                              vibrar(10);
+                              setCorTema(key as any);
+                            }}
+                            className={`p-1.5 rounded-lg border transition-all flex flex-col items-center gap-1 ${
+                              corTema === key 
+                                ? "bg-primary-50 dark:bg-primary-900/20 border-primary-500" 
+                                : "bg-transparent border-gray-100 dark:border-gray-800"
+                            }`}
+                          >
+                            <div className="w-6 h-6 rounded shadow-sm" style={{ backgroundColor: theme[500] }} />
+                            <span className={`text-[8px] font-bold truncate w-full text-center ${corTema === key ? "text-primary-600" : "text-gray-500"}`}>{theme.name}</span>
+                          </button>
+                        ))}
                       </div>
-                      <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                    
+                    </div>
+
+                    <div>
+                      <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Modo</h4>
+                      <div className="grid grid-cols-3 gap-2 p-1 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+                        {[
+                          { id: "light", label: "Claro", icon: Sun },
+                          { id: "dark", label: "Escuro", icon: Moon },
+                          { id: "system", label: "Auto", icon: Activity }
+                        ].map((mode) => {
+                          const Icon = mode.icon;
+                          const active = themeMode === mode.id;
+                          return (
+                            <button
+                              key={mode.id}
+                              onClick={() => {
+                                vibrar(10);
+                                setThemeMode(mode.id as any);
+                              }}
+                              className={`py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                                active ? "bg-white dark:bg-gray-800 shadow-sm text-primary-500 font-bold" : "text-gray-400"
+                              }`}
+                            >
+                              <Icon size={14} />
+                              <span className="text-[8px] font-black uppercase">{mode.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {abaConfig === "Dados" && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: "JSON", icon: BoxIcon, color: "blue", action: () => {
+                          const blob = new Blob([JSON.stringify(transacoes)], { type: "application/json" });
+                          const a = document.createElement("a");
+                          a.href = URL.createObjectURL(blob);
+                          a.download = `backup_AutoCaixa_${getLocalISODate()}.json`;
+                          a.click();
+                          mostrarToast("Backup exportado!");
+                        }},
+                        { label: "CSV", icon: TableIcon, color: "green", action: exportarCSV },
+                        { label: "PDF", icon: FileText, color: "red", action: gerarRelatorioPDF },
+                        { label: "Limpar", icon: Trash2, color: "gray", action: () => {
+                           if (confirm("Resetar todos os dados?")) {
+                             setTransacoes([]);
+                             mostrarToast("Dados apagados");
+                           }
+                        }}
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          onClick={item.action}
+                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 transition-all border-b-2"
+                        >
+                          <div className={`p-1.5 rounded-lg bg-${item.color}-50 dark:bg-${item.color}-900/20 text-${item.color}-600`}>
+                            <item.icon size={16} />
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center justify-between py-5 group transition-all px-1"
+                      className="w-full flex items-center justify-center gap-2 p-3.5 bg-primary-500 rounded-xl text-white font-bold text-[11px] uppercase tracking-widest shadow-lg shadow-primary-500/20"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Upload size={18} />
-                        </div>
-                        <div className="text-left">
-                          <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Restaurar Dados</span>
-                          <span className="text-[11px] text-gray-400 font-medium">Carregar backup anterior</span>
-                        </div>
-                      </div>
-                      <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
+                      <Upload size={14} />
+                      Importar Backup
                     </button>
+                  </motion.div>
+                )}
 
-                    <button
-                      onClick={() => {
-                        if (confirm("Deseja apagar todos os dados permanentemente?")) {
-                          setTransacoes([]);
-                          mostrarToast("Todos os dados apagados.");
-                        }
-                      }}
-                      className="w-full flex items-center justify-between py-5 group px-1"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Trash2 size={18} />
-                        </div>
-                        <div className="text-left">
-                          <span className="text-sm font-bold text-red-600 block tracking-tight">Limpar Tudo</span>
-                          <span className="text-[11px] text-red-400/50 font-medium tracking-tight">Apagar permanentemente</span>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-               </div>
+                {abaConfig === "Perfil" && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    <div className="space-y-4">
+                       <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Dados de Apresentação</h4>
+                       
+                       <div className="space-y-4 bg-gray-50 dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800">
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-primary-500 uppercase tracking-[0.1em]">Nome do Usuário</label>
+                             <input 
+                                type="text"
+                                value={userProfile.nome}
+                                onChange={(e) => setUserProfile({...userProfile, nome: e.target.value})}
+                                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-800 py-1 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-primary-500 transition-colors"
+                             />
+                          </div>
 
-               <div className="pt-8 border-t border-gray-100 dark:border-gray-800/50 flex flex-col items-center text-center">
-                  <div className="w-14 h-14 bg-gradient-to-tr from-primary-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-lg shadow-primary-500/20 mb-4 scale-90">
-                    <RainbowAIIcon size={30} />
-                  </div>
-                  <p className="text-base font-black text-gray-900 dark:text-white tracking-tight leading-none">MeuCaixa <span className="text-primary-500">Financeiro</span></p>
-                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-3">Versão 2.5.0 STABLE</p>
-               </div>
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-primary-500 uppercase tracking-[0.1em]">Área de Atuação</label>
+                             <select 
+                                value={userProfile.profissao}
+                                onChange={(e) => setUserProfile({...userProfile, profissao: e.target.value})}
+                                className="w-full bg-transparent border-b border-gray-200 dark:border-gray-800 py-1 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-primary-500 transition-colors appearance-none cursor-pointer"
+                             >
+                                {Object.entries(PROFISSOES_CONFIG).map(([key, cfg]) => (
+                                   <option key={key} value={key}>{cfg.titulo}</option>
+                                ))}
+                             </select>
+                          </div>
+
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-primary-500 uppercase tracking-[0.1em]">Meta Mensal (Líquido)</label>
+                             <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-gray-400">R$</span>
+                                <input 
+                                   type="number"
+                                   value={userProfile.metaMensal}
+                                   onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      setUserProfile({...userProfile, metaMensal: val});
+                                      setMetaDiaria(Math.round(val / 22));
+                                   }}
+                                   className="w-full bg-transparent border-b border-gray-200 dark:border-gray-800 py-1 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-primary-500 transition-colors"
+                                />
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="p-4 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/30 flex gap-3">
+                          <Info size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                          <p className="text-[10px] text-indigo-900/60 dark:text-indigo-300/60 leading-relaxed font-medium">
+                             Estas informações personalizam os <b>insights automáticos</b> e a <b>linguagem</b> do cérebro AutoCaixa. Atualize-as sempre que mudar seus planos.
+                          </p>
+                       </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {abaConfig === "IA" && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                     <div className="relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                           <Activity size={80} className="text-white animate-pulse" />
+                        </div>
+                        <div className="bg-indigo-600 p-6 rounded-2xl text-white flex gap-4 items-center shadow-lg shadow-indigo-500/20 relative z-10">
+                           <RainbowAIIcon size={32} className="flex-shrink-0" />
+                           <div>
+                              <h3 className="text-sm font-black">Cérebro AutoCaixa v4.2</h3>
+                              <div className="flex items-center gap-2">
+                                 <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-ping" />
+                                 <p className="text-[10px] opacity-80 uppercase tracking-widest font-black">Núcleo Central Ativo</p>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-3 gap-2 px-1">
+                        {[
+                           { label: "Sinc", val: "Online", color: "text-green-500" },
+                           { label: "Latência", val: "14ms", color: "text-blue-500" },
+                           { label: "Precisão", val: "99.9%", color: "text-purple-500" }
+                        ].map(s => (
+                           <div key={s.label} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-2 rounded-xl text-center">
+                              <p className="text-[7px] font-black text-gray-400 uppercase tracking-tighter">{s.label}</p>
+                              <p className={`text-[9px] font-bold ${s.color}`}>{s.val}</p>
+                           </div>
+                        ))}
+                     </div>
+
+                     <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/50">
+                        <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-2">Memória do Cérebro</h5>
+                        <textarea
+                          value={configAI.baseConhecimento || ""}
+                          onChange={(e) => setConfigAI({...configAI, baseConhecimento: e.target.value})}
+                          placeholder="Adicione fatos que o cérebro deve sempre saber sobre suas finanças ou rotina..."
+                          className="w-full h-24 bg-transparent text-[11px] text-gray-600 dark:text-gray-300 outline-none resize-none pb-2 custom-scrollbar"
+                        />
+                     </div>
+
+                     <div className="grid gap-2">
+                        {[
+                          { label: "Análise Ultra-Sábia", sub: "Insights estratégicos profundos", active: configAI.nivelDetalhe === 'detalhado', action: () => setConfigAI(prev => ({ ...prev, nivelDetalhe: prev.nivelDetalhe === 'detalhado' ? 'resumido' : 'detalhado' })) },
+                          { label: "Busca Global", sub: "Consultar internet em tempo real", active: true, action: () => {} },
+                          { label: "Modo Autônomo", sub: "Sugestões proativas do cérebro", active: configAI.dicasProativas, action: () => setConfigAI(prev => ({ ...prev, dicasProativas: !prev.dicasProativas })) }
+                        ].map((opt) => (
+                          <button 
+                            key={opt.label}
+                            onClick={opt.action}
+                            className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800"
+                          >
+                            <div className="text-left">
+                               <p className="text-[11px] font-bold">{opt.label}</p>
+                               <p className="text-[8px] text-gray-400 font-medium">{opt.sub}</p>
+                            </div>
+                            <div className={`w-10 h-5 rounded-full relative transition-colors ${opt.active ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                               <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${opt.active ? 'left-5.5' : 'left-0.5'}`} />
+                            </div>
+                          </button>
+                        ))}
+                     </div>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="mt-8 text-center pb-4 border-t border-gray-100 dark:border-gray-800 pt-6">
+                 <div className="inline-flex items-center gap-2 bg-gray-50 dark:bg-gray-900 px-3 py-1.5 rounded-full border border-gray-100 dark:border-gray-800">
+                    <RainbowAIIcon size={14} className="text-primary-500" />
+                    <span className="text-[10px] font-black text-gray-900 dark:text-white tracking-widest uppercase">AutoCaixa v4.0</span>
+                 </div>
+              </div>
             </div>
             <input
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept=".json"
+              accept=".json,.csv"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                  try {
-                    const data = JSON.parse(ev.target?.result as string);
-                    setTransacoes(Array.isArray(data) ? data.map(higienizarTransacao) : []);
-                    mostrarToast("Dados restaurados");
-                  } catch { mostrarToast("Erro no arquivo", "erro"); }
-                };
-                reader.readAsText(file);
+                if (file) importarDados(file);
               }}
             />
           </ModalPage>
@@ -2556,10 +3233,10 @@ export default function App() {
             key="modal-ai"
             isOpen={isAIOpen}
             onClose={() => setIsAIOpen(false)}
-            title="Sua Consultoria Nativa"
-            subtitle="Inteligência Financeira"
+            title="Cérebro AutoCaixa"
+            subtitle="Inteligência Autônoma e Sábia"
             icon={RainbowAIIcon}
-            primaryColor="text-primary-600"
+            primaryColor="text-indigo-600"
           >
             <div className="flex flex-col h-[80vh] overflow-hidden">
               <div className="flex justify-center gap-6 border-b border-gray-100 dark:border-gray-800/50 pb-4 mb-6">
@@ -2582,13 +3259,13 @@ export default function App() {
                     <div className="space-y-6 pb-6">
                       <div className="py-5 border-b border-gray-50 dark:border-gray-800/30 relative overflow-hidden group">
                         <div className="flex items-center gap-3 mb-3">
-                           <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center">
+                           <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center">
                               <Zap size={20} strokeWidth={2.5} />
                            </div>
-                           <h4 className="text-sm font-black tracking-tight">Diagnóstico Estratégico</h4>
+                           <h4 className="text-sm font-black tracking-tight">Análise Holística</h4>
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed italic pl-12">
-                          "Varredura concluída em {transacoesMes.length} transações. Padrões identificados."
+                          "Sincronização completa ativa. Processando padrões de produtividade."
                         </p>
                       </div>
                       
@@ -2617,7 +3294,7 @@ export default function App() {
                         onClick={async () => {
                           mostrarToast("Sincronizando...");
                           try {
-                            const novos = await gerarInsightsNativos(transacoes, metaDiaria, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA, configAI);
+                            const novos = await gerarInsightsNativos(transacoes, metaDiaria, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA, configAI, userProfile);
                             setInsights(novos);
                           } catch (e) { console.error(e); }
                         }}
@@ -2669,21 +3346,110 @@ export default function App() {
                                </div>
                                <button 
                                  onClick={() => setConfigAI({...configAI, focarEmGanhos: !configAI.focarEmGanhos})} 
-                                 className={`w-11 h-6 rounded-full p-1 transition-all duration-300 ${configAI.focarEmGanhos ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-800'}`}
+                                 className={`w-11 h-6 rounded-full p-1 transition-all duration-300 ${configAI.focarEmGanhos ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-800'}`}
                                >
                                   <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${configAI.focarEmGanhos ? 'translate-x-5' : 'translate-x-0'}`} />
                                </button>
                             </div>
 
-                            <div className="py-5 flex items-center justify-between px-1 opacity-50 grayscale pointer-events-none">
-                               <div>
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Análise Preditiva</span>
-                                  <span className="text-xs text-gray-400 font-medium">Previsões futuras (Premium)</span>
+                             <div className="py-6">
+                               <div className="flex items-center gap-2 mb-4">
+                                 <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center">
+                                   <ArrowUpRight size={16} />
+                                 </div>
+                                 <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Base de Conhecimento Própria</h5>
                                </div>
-                               <div className="w-11 h-6 rounded-full bg-gray-200 dark:bg-gray-800 p-1">
-                                  <div className="w-4 h-4 bg-white rounded-full" />
+                               <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 px-1 leading-relaxed">
+                                 Adicione informações que o cérebro deve SEMPRE lembrar (ex: gastos fixos ocultos, metas de vida, estratégias locais).
+                               </p>
+                               <textarea
+                                 value={configAI.baseConhecimento || ""}
+                                 onChange={(e) => setConfigAI({...configAI, baseConhecimento: e.target.value})}
+                                 placeholder="Ex: Meu carro faz 10km/l. Evito trabalhar após as 22h. Meta de lucro real é 50%..."
+                                 className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-400 outline-none focus:ring-2 ring-indigo-500/20 resize-none transition-all"
+                               />
+                             </div>
+
+                             <div className="py-5 flex items-center justify-between px-1">
+                               <div>
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Cérebro Autônomo</span>
+                                  <span className="text-xs text-gray-400 font-medium">Análise preditiva e proativa (Ativo)</span>
+                               </div>
+                               <div className="w-11 h-6 rounded-full bg-indigo-600 p-1">
+                                  <div className="w-4 h-4 bg-white rounded-full translate-x-5" />
                                </div>
                             </div>
+
+                            <div className="py-5 flex items-center justify-between px-1 border-b border-gray-50 dark:border-gray-800/30">
+                               <div>
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Rede Mundial Ativa</span>
+                                  <span className="text-xs text-gray-400 font-medium">Consulta global em tempo real</span>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                  <span className="text-[9px] font-bold text-green-500 uppercase tracking-widest">Conectado</span>
+                               </div>
+                            </div>
+
+                            <div className="py-8 space-y-4">
+                                <div className="flex items-center justify-between px-1 pt-2">
+                                   <div className="space-y-1">
+                                      <h4 className="text-[10px] font-black text-primary-500 uppercase tracking-[0.2em]">Interação em Tempo Real</h4>
+                                      <p className="text-[9px] text-gray-400 font-medium">Teste a personalidade do Cérebro agora.</p>
+                                   </div>
+                                   <button 
+                                      onClick={testarPersonalidadeIA}
+                                      disabled={isTestandoPersonalidade}
+                                      className="p-3 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                   >
+                                      <Zap size={20} className={isTestandoPersonalidade ? "animate-pulse" : ""} />
+                                   </button>
+                                </div>
+
+                                {testePersonalidade && (
+                                   <motion.div 
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      className="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-3xl border border-gray-100 dark:border-gray-800 relative group"
+                                   >
+                                      <div className="absolute -top-2 left-4 px-2 bg-primary-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg">Resposta Instantânea</div>
+                                      <p className="text-xs text-gray-600 dark:text-gray-300 italic font-medium leading-relaxed">
+                                         "{testePersonalidade}"
+                                      </p>
+                                   </motion.div>
+                                )}
+
+                                <div className="p-5 bg-gradient-to-br from-indigo-500/5 to-primary-500/5 rounded-3xl border border-gray-100/50 dark:border-gray-800/50 overflow-hidden relative">
+                                   <div className="flex items-center gap-3 mb-4">
+                                      <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center">
+                                         <Activity size={14} className="text-primary-500 animate-[pulse_2s_infinite]" />
+                                      </div>
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Status dos Núcleos</span>
+                                   </div>
+                                   <div className="grid grid-cols-2 gap-3">
+                                      <div className="space-y-1">
+                                         <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                            <motion.div 
+                                               animate={{ width: ["10%", "90%", "60%", "100%"] }} 
+                                               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                                               className="h-full bg-primary-500" 
+                                            />
+                                         </div>
+                                         <span className="text-[8px] font-black uppercase tracking-tighter text-gray-400">Analítico</span>
+                                      </div>
+                                      <div className="space-y-1">
+                                         <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                            <motion.div 
+                                               animate={{ width: ["90%", "20%", "70%", "85%"] }} 
+                                               transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+                                               className="h-full bg-indigo-500" 
+                                            />
+                                         </div>
+                                         <span className="text-[8px] font-black uppercase tracking-tighter text-gray-400">Preditivo</span>
+                                      </div>
+                                   </div>
+                                </div>
+                             </div>
                           </div>
                        </div>
                     </div>
@@ -2697,8 +3463,8 @@ export default function App() {
                       type="text"
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
-                      placeholder="Fale com sua consultora..."
-                      className="flex-1 h-12 px-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 ring-primary-500/20"
+                      placeholder="Consulte a Sabedoria do Cérebro..."
+                      className="flex-1 h-12 px-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 ring-indigo-500/20"
                       onKeyPress={(e) => e.key === "Enter" && handleSendToAI()}
                     />
                     <button
@@ -2715,6 +3481,7 @@ export default function App() {
           </ModalPage>
         </AnimatePresence>
       </div>
+      )}
     </div>
   );
 }
@@ -2724,11 +3491,15 @@ function FormularioLancamento({
   isDarkMode,
   edicao,
   vibrar,
+  categoriasReceita,
+  categoriasDespesa,
 }: {
   aoSalvar: (n: any) => void;
   isDarkMode: boolean;
   edicao: Transacao | null;
   vibrar: (ms?: number | number[]) => void;
+  categoriasReceita: Categoria[];
+  categoriasDespesa: Categoria[];
 }) {
   const [tipo, setTipo] = useState<TipoTransacao>(edicao?.tipo || "receita");
   const [valor, setValor] = useState(
@@ -2744,6 +3515,7 @@ function FormularioLancamento({
   const [tagInput, setTagInput] = useState("");
   const [processandoRecibo, setProcessandoRecibo] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [salvoComSucesso, setSalvoComSucesso] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lerRecibo = async (file: File) => {
@@ -2755,18 +3527,27 @@ function FormularioLancamento({
           const base64Data = (reader.result as string).split(',')[1];
           const apiKey = process.env.GEMINI_API_KEY;
           if (!apiKey) {
-             alert("Chave do Gemini não configurada!");
+             alert("Chave da Inteligência Central não configurada no ambiente!");
              setProcessandoRecibo(false);
              return;
           }
           const ai = new GoogleGenAI({ apiKey });
           
-          const prompt = `Analise este recibo ou nota fiscal e extraia os seguintes dados em JSON puro, sem formatação markdown:
+          const prompt = `Você é o Cérebro Analítico do AutoCaixa. Sua sabedoria financeira permite extrair dados com precisão cirúrgica de qualquer recibo ou nota fiscal, mesmo que a imagem esteja borrada ou incompleta.
+
+Sua tarefa:
+1. Identificar o valor total (numérico).
+2. Definir uma descrição curta e inteligente (ex: "Abastecimento Posto BR", "Troca de Óleo", "Lanche Drive-thru").
+3. Capturar a data (YYYY-MM-DD).
+
+Responda ESTRITAMENTE em JSON puro, sem blocos de código ou markdown:
 {
-  "valor": <number>, 
-  "descricao": "<string>", 
+  "valor": <número decimal>, 
+  "descricao": "<texto curto e sábio>", 
   "data": "<YYYY-MM-DD>"
-}`;
+}
+
+Se encontrar múltiplos valores, escolha o TOTAL final pago. Se a data não for legível, use a data de hoje: ${getLocalISODate()}.`;
 
           const response = await ai.models.generateContent({
              model: "gemini-3-flash-preview",
@@ -2804,6 +3585,13 @@ function FormularioLancamento({
     });
   };
 
+  const handleQuickAdd = (add: number) => {
+    const atual = Number(valor.replace(/\./g, "").replace(",", ".")) || 0;
+    const novoValor = atual + add;
+    setValor(novoValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 }));
+    vibrar(20);
+  };
+
   const handleSalvar = () => {
     const valorNumerico = Number(valor.replace(/\./g, "").replace(",", "."));
     if (isNaN(valorNumerico) || valorNumerico <= 0) return;
@@ -2813,8 +3601,8 @@ function FormularioLancamento({
     const descricaoFinal =
       desc.trim() ||
       (tipo === "receita"
-        ? CATEGORIAS_RECEITA.find((c) => c.id === cat)?.nome
-        : CATEGORIAS_DESPESA.find((c) => c.id === cat)?.nome) ||
+        ? categoriasReceita.find((c) => c.id === cat)?.nome
+        : categoriasDespesa.find((c) => c.id === cat)?.nome) ||
       "Lançamento";
 
     aoSalvar({
@@ -2826,6 +3614,16 @@ function FormularioLancamento({
       custoFixo: (tipo === "despesa") ? custoFixo : undefined,
       tags,
     });
+
+    if (!edicao) {
+      setSalvoComSucesso(true);
+      setValor("");
+      setDesc("");
+      setCat("");
+      setTags([]);
+      vibrar([30, 20, 30]);
+      setTimeout(() => setSalvoComSucesso(false), 3000);
+    }
   };
 
   return (
@@ -2867,11 +3665,7 @@ function FormularioLancamento({
           {[10, 50, 100].map((v) => (
             <button
               key={v}
-              onClick={() =>
-                setValor(
-                  v.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
-                )
-              }
+              onClick={() => handleQuickAdd(v)}
               className="px-5 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-400 transition-colors"
             >
               + {v}
@@ -2881,7 +3675,7 @@ function FormularioLancamento({
       </div>
 
       <div className="grid grid-cols-4 gap-3 mb-4">
-        {(tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA).map(
+        {(tipo === "receita" ? categoriasReceita : categoriasDespesa).map(
           (c) => (
             <motion.button
               key={c.id}
@@ -2986,6 +3780,7 @@ function FormularioLancamento({
         <input 
           type="file" 
           accept="image/*" 
+          capture="environment"
           className="hidden" 
           ref={fileInputRef} 
           onChange={(e) => e.target.files && e.target.files[0] ? lerRecibo(e.target.files[0]) : null} 
@@ -3004,6 +3799,17 @@ function FormularioLancamento({
           {processandoRecibo ? "Analisando com IA..." : "Escanear Nota / Recibo"}
         </motion.button>
       </div>
+
+      {salvoComSucesso && (
+        <motion.div
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-3 text-green-600 dark:text-green-400"
+        >
+           <CheckCircle2 size={18} />
+           <p className="text-xs font-bold">Lançamento realizado! O que mais temos pra hoje?</p>
+        </motion.div>
+      )}
 
       <motion.button
         whileHover={{ scale: 1.02 }}

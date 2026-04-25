@@ -1,6 +1,6 @@
 {
   "name": "AutoCaixa",
   "description": "App de controle financeiro para motoristas (Uber, 99, etc) com dashboard, extrato e backup.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": []
 }

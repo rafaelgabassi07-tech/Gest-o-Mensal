@@ -11,6 +11,7 @@ export interface Transacao {
   descricao: string;
   custoFixo?: boolean;
   tags?: string[];
+  versao?: string;
 }
 
 export interface Categoria {
@@ -28,6 +29,13 @@ export interface SemanaAgrupada {
   lucro: number;
 }
 
+export interface UserProfile {
+  nome: string;
+  profissao: string;
+  metaMensal: number;
+  primeiroAcesso: boolean;
+}
+
 export type NivelDetalheAI = "resumido" | "padrao" | "detalhado";
 
 export interface ConfiguracaoAI {
@@ -35,4 +43,6 @@ export interface ConfiguracaoAI {
   focarEmGanhos: boolean;
   focarEmGastos: boolean;
   hapticosAtivos: boolean;
+  dicasProativas?: boolean;
+  baseConhecimento?: string;
 }
