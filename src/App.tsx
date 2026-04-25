@@ -93,6 +93,7 @@ import {
   PieChart,
   Pie,
   ReferenceLine,
+  Legend,
 } from "recharts";
 
 import {
@@ -1245,7 +1246,8 @@ export default function App() {
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.6}
               onDragEnd={(_, info) => {
-                const threshold = 80;
+                const threshold = 100;
+                const velocityThreshold = 200;
                 const tabs: ("resumo" | "adicionar" | "historico")[] = [
                   "resumo",
                   "adicionar",
@@ -1253,15 +1255,21 @@ export default function App() {
                 ];
                 const currentIndex = tabs.indexOf(tabAtual);
 
-                if (
-                  info.offset.x < -threshold &&
-                  currentIndex < tabs.length - 1
-                ) {
-                  setDirecao(1);
-                  setTabAtual(tabs[currentIndex + 1]);
-                } else if (info.offset.x > threshold && currentIndex > 0) {
-                  setDirecao(-1);
-                  setTabAtual(tabs[currentIndex - 1]);
+                const isSignificantSwipe = 
+                  Math.abs(info.offset.x) > threshold || 
+                  Math.abs(info.velocity.x) > velocityThreshold;
+
+                if (isSignificantSwipe) {
+                  if (
+                    info.offset.x < 0 &&
+                    currentIndex < tabs.length - 1
+                  ) {
+                    setDirecao(1);
+                    setTabAtual(tabs[currentIndex + 1]);
+                  } else if (info.offset.x > 0 && currentIndex > 0) {
+                    setDirecao(-1);
+                    setTabAtual(tabs[currentIndex - 1]);
+                  }
                 }
               }}
               className="w-full min-h-full touch-pan-y"
@@ -1498,7 +1506,7 @@ export default function App() {
                           </p>
                         </div>
                       ) : (
-                        <div className="space-y-4">
+                    <div className="space-y-4" onPointerDown={(e) => e.stopPropagation()}>
                           {topCategorias.map((cat, index) => (
                             <div key={`resumo-cat-${cat.id}-${index}`} className="group">
                               <div className="flex justify-between items-end mb-1.5">
@@ -1663,95 +1671,63 @@ export default function App() {
                             Fluxo (7 Dias)
                           </h4>
                         </div>
-                        <div className="flex items-center gap-4 bg-gray-50 dark:bg-white/5 py-1.5 px-3 rounded-full">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 bg-primary-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                            <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest ">
-                              Ganhos
-                            </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-4 bg-gray-50 dark:bg-white/5 py-1.5 px-3 rounded-full">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 bg-primary-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                              <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest ">
+                                Ganhos
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                              <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest ">
+                                Gastos
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
-                            <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest ">
-                              Gastos
-                            </span>
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-full border border-emerald-100 dark:border-emerald-900/20">
+                             <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
+                             <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">Em Alta</span>
                           </div>
                         </div>
                       </div>
-                      <div className="h-[240px] w-full outline-none focus:outline-none mt-2">
+                      <div 
+                        className="h-[300px] w-full outline-none focus:outline-none mt-2"
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
                         <ResponsiveContainer
                           width="100%"
                           height="100%"
                           className="outline-none"
                         >
-                          <AreaChart
+                          <BarChart
                             data={dadosGrafico.dias}
                             margin={{
                               top: 10,
-                              right: 10,
+                              right: 20,
                               left: -20,
                               bottom: 0,
                             }}
                           >
-                            <defs>
-                              <linearGradient
-                                id="colorRec"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                              >
-                                <stop
-                                  offset="0%"
-                                  stopColor="#2563EB"
-                                  stopOpacity={0.6}
-                                />
-                                <stop
-                                  offset="100%"
-                                  stopColor="#3B82F6"
-                                  stopOpacity={0.05}
-                                />
-                              </linearGradient>
-                              <linearGradient
-                                id="colorDesp"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                              >
-                                <stop
-                                  offset="0%"
-                                  stopColor="#DC2626"
-                                  stopOpacity={0.6}
-                                />
-                                <stop
-                                  offset="100%"
-                                  stopColor="#EF4444"
-                                  stopOpacity={0.05}
-                                />
-                              </linearGradient>
-                              <linearGradient
-                                id="colorLucro"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                              >
-                                <stop
-                                  offset="0%"
-                                  stopColor="#10B981"
-                                  stopOpacity={0.6}
-                                />
-                                <stop
-                                  offset="100%"
-                                  stopColor="#10B981"
-                                  stopOpacity={0.05}
-                                />
-                              </linearGradient>
-                            </defs>
+                            <YAxis hide domain={[0, 'auto']} />
+                            <Legend 
+                              verticalAlign="top" 
+                              align="right" 
+                              iconType="circle" 
+                              iconSize={8}
+                              wrapperStyle={{
+                                fontSize: '9px',
+                                fontWeight: 900,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                paddingBottom: '20px'
+                              }}
+                              formatter={(value) => <span style={{ color: '#9CA3AF' }}>{value}</span>}
+                            />
                             <CartesianGrid
                               strokeDasharray="4 4"
-                              vertical={true}
+                              vertical={false}
                               strokeOpacity={isDarkMode ? 0.05 : 0.08}
                               stroke={isDarkMode ? "#ffffff" : "#000000"}
                             />
@@ -1765,50 +1741,37 @@ export default function App() {
                                 fill: "#9CA3AF",
                               }}
                               dy={15}
-                            />
-                            <YAxis hide />
-                            <ReTooltip
-                              content={
-                                <CustomTooltip isDarkMode={isDarkMode} />
+                              interval={0}
+                              tickFormatter={(val) =>
+                                val.charAt(0).toUpperCase() + val.slice(1)
                               }
                             />
-                            <Area
-                              type="monotone"
-                              dataKey="receitas"
-                              stroke="#3B82F6"
-                              strokeWidth={4}
-                              fillOpacity={1}
-                              fill="url(#colorRec)"
-                              name="Receitas"
-                              isAnimationActive={true}
-                              animationDuration={1500}
-                              activeDot={{ r: 6, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
+                            <ReTooltip
+                              content={<CustomTooltip isDarkMode={isDarkMode} />}
+                              cursor={{ fill: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}
                             />
-                            <Area
-                              type="monotone"
-                              dataKey="despesas"
-                              stroke="#F43F5E"
-                              strokeWidth={4}
-                              fillOpacity={1}
-                              fill="url(#colorDesp)"
-                              name="Despesas"
-                              isAnimationActive={true}
-                              animationDuration={1500}
-                              activeDot={{ r: 6, fill: '#F43F5E', stroke: '#fff', strokeWidth: 2 }}
+                            <Bar 
+                              dataKey="receitas" 
+                              name="Ganhos" 
+                              fill="#3B82F6" 
+                              radius={[4, 4, 0, 0]} 
+                              barSize={8} 
                             />
-                            <Area
-                              type="monotoneX"
-                              dataKey="lucro"
-                              stroke="#10B981"
-                              strokeWidth={3}
-                              fillOpacity={1}
-                              fill="url(#colorLucro)"
-                              name="Lucro Líquido"
-                              isAnimationActive={true}
-                              animationDuration={1200}
-                              activeDot={{ r: 6, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
+                            <Bar 
+                              dataKey="despesas" 
+                              name="Gastos" 
+                              fill="#F43F5E" 
+                              radius={[4, 4, 0, 0]} 
+                              barSize={8} 
                             />
-                          </AreaChart>
+                            <Bar 
+                              dataKey="lucro" 
+                              name="Líquido" 
+                              fill="#10B981" 
+                              radius={[4, 4, 0, 0]} 
+                              barSize={8} 
+                            />
+                          </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </motion.div>
@@ -1839,10 +1802,13 @@ export default function App() {
                         </div>
                         <ListIcon size={16} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
                       </div>
-                      <div className="h-[240px] w-full outline-none focus:outline-none mt-2 relative">
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-4">
-                           <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total</span>
-                           <span className="text-base font-black text-gray-900 dark:text-white display-font leading-none">{formatarMoeda(resumoMes.receitas)}</span>
+                      <div 
+                        className="h-[300px] w-full outline-none focus:outline-none mt-2 relative"
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-4 z-10">
+                           <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1 shadow-sm">Receita Total</span>
+                           <span className="text-xl font-black text-gray-900 dark:text-white display-font leading-none drop-shadow-sm">{formatarMoeda(resumoMes.receitas)}</span>
                         </div>
                         <ResponsiveContainer
                           width="100%"
@@ -1872,14 +1838,14 @@ export default function App() {
                               data={receitaPorFonte}
                               cx="50%"
                               cy="50%"
-                              innerRadius={55}
-                              outerRadius={75}
+                              innerRadius={70}
+                              outerRadius={95}
                               paddingAngle={8}
                               dataKey="valor"
                               isAnimationActive={true}
                               animationDuration={1500}
                               stroke="none"
-                              cornerRadius={8}
+                              cornerRadius={12}
                             >
                               {receitaPorFonte.map((_, index) => (
                                 <Cell
@@ -1902,6 +1868,17 @@ export default function App() {
                             />
                           </PieChart>
                         </ResponsiveContainer>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-4 px-2">
+                        {receitaPorFonte.slice(0, 4).map((f, i) => (
+                          <div key={`fonte-legenda-${i}`} className="bg-gray-50 dark:bg-white/[0.02] p-2 rounded-lg border border-gray-100 dark:border-white/[0.05] flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-1.5 h-1.5 rounded-full ${['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500'][i % 4]}`} />
+                              <span className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase truncate max-w-[60px]">{f.nome}</span>
+                            </div>
+                            <span className="text-[10px] font-black text-gray-900 dark:text-white uppercase">{formatarMoeda(f.valor).replace('R$', '')}</span>
+                          </div>
+                        ))}
                       </div>
                     </motion.div>
                   </div>
@@ -1933,7 +1910,10 @@ export default function App() {
                         </span>
                       </div>
                     </div>
-                    <div className="h-[240px] w-full outline-none focus:outline-none mt-2">
+                    <div 
+                      className="h-[240px] w-full outline-none focus:outline-none mt-2"
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
                       <ResponsiveContainer
                         width="100%"
                         height="100%"
