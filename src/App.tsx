@@ -45,6 +45,7 @@ import {
   ReceiptText,
   PieChart as PieChartIcon,
   ShieldCheck,
+  Info,
   Key,
   MapPin,
   Droplets,
@@ -76,6 +77,7 @@ import {
   Droplet,
   Camera,
   Loader2,
+  Lock,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -231,6 +233,7 @@ const CATEGORIAS_DESPESA: Categoria[] = [
   { id: "educacao", nome: "Educação", icone: GraduationCap },
   { id: "compras", nome: "Compras", icone: ShoppingBag },
   { id: "contas", nome: "Contas", icone: FileText },
+  { id: "manutencao", nome: "Manutenção", icone: Wrench },
   { id: "outros", nome: "Outros", icone: MoreHorizontal },
 ];
 
@@ -271,7 +274,7 @@ const CustomTooltip = ({ active, payload, label, isDarkMode }: any) => {
             const solidColor = getSolidColor(entry.color);
             return (
               <div
-                key={index}
+                key={`tooltip-${entry.dataKey || entry.name || 'item'}-${index}`}
                 className="flex items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-2">
@@ -320,6 +323,68 @@ const RainbowAIIcon = ({ size = 16, className = "" }: { size?: number; className
   </div>
 )};
 
+const ModalPage = ({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  icon: Icon,
+  primaryColor = "text-primary-500",
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  icon?: any;
+  primaryColor?: string;
+}) => (
+  <AnimatePresence>
+    {isOpen && (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 20 }}
+        className="fixed inset-0 z-[150] flex flex-col bg-white dark:bg-gray-950"
+      >
+        <div className="flex items-center justify-between p-4 sticky top-0 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md z-10 border-b border-gray-100 dark:border-gray-900">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-500 rounded-xl transition-all active:scale-90"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                {Icon && <Icon size={20} className={primaryColor} />}
+                {title}
+              </h3>
+              {subtitle && (
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none mt-1">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-400 rounded-xl transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar pb-12">
+          <div className="max-w-xl mx-auto w-full">
+            {children}
+          </div>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
 export default function App() {
   const [tabAtual, setTabAtual] = useState<
     "resumo" | "adicionar" | "historico"
@@ -359,6 +424,7 @@ export default function App() {
   } | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isBalancoModalOpen, setIsBalancoModalOpen] = useState(false);
   const [isDespesasModalOpen, setIsDespesasModalOpen] = useState(false);
   const [isReceitasModalOpen, setIsReceitasModalOpen] = useState(false);
   const [metaDiaria, setMetaDiaria] = useState(() => {
@@ -509,6 +575,13 @@ export default function App() {
 
   const toastRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [tabAtual]);
 
   useEffect(() => {
     localStorage.setItem("@MeuCaixa:theme", isDarkMode ? "dark" : "light");
@@ -694,6 +767,11 @@ export default function App() {
     transacoesMes,
     todasCategoriasGastos,
     totalCustosFixos,
+    ticketMedio,
+    indiceEficiencia,
+    diasLucrativos,
+    gastoEssencial,
+    gastoLivre,
   } = useMemo(() => {
     const hojeStr = getLocalISODate();
     const hoje = new Date();
@@ -815,6 +893,24 @@ export default function App() {
 
     const maxV = Math.max(...dias.map((d) => d.receitas + d.despesas), 100);
     const totalCustosFixos = tMes.filter(t => t.tipo === "despesa" && t.custoFixo).reduce((a, b) => a + b.valor, 0);
+    
+    // Novas métricas adicionais
+    const numReceitas = tMes.filter(t => t.tipo === "receita").length;
+    const ticketMedio = rMes.receitas / (numReceitas || 1);
+    const indiceEficiencia = (rMes.receitas / (rMes.despesas || 1));
+    const diasLucrativos = dias.filter(d => d.lucro > 0).length;
+
+    // Cálculo Regra de Ouro (Mês Atual)
+    const categoriasEssenciais = ["moradia", "alimentacao", "transporte", "saude", "contas", "manutencao"];
+    const categoriasLivre = ["lazer", "compras", "educacao"];
+
+    const gastoEssencial = tMes
+      .filter(t => t.tipo === "despesa" && categoriasEssenciais.includes(t.categoria))
+      .reduce((acc, t) => acc + t.valor, 0);
+    
+    const gastoLivre = tMes
+      .filter(t => t.tipo === "despesa" && categoriasLivre.includes(t.categoria))
+      .reduce((acc, t) => acc + t.valor, 0);
 
     return {
       saldoTotal: total,
@@ -830,6 +926,11 @@ export default function App() {
       lucroMes: rMes.receitas - rMes.despesas,
       transacoesMes: tMes,
       totalCustosFixos,
+      ticketMedio,
+      indiceEficiencia,
+      diasLucrativos,
+      gastoEssencial,
+      gastoLivre,
       dadosGrafico: { dias, maxValor: Math.ceil(maxV / 50) * 50 },
     };
   }, [transacoes, metaDiaria]);
@@ -1117,7 +1218,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto pb-32 relative scroll-smooth overflow-x-hidden">
+        <main ref={mainRef} className="flex-1 overflow-y-auto pb-32 relative scroll-smooth overflow-x-hidden">
           <AnimatePresence mode="popLayout" initial={false} custom={direcao}>
             <motion.div
               key={tabAtual}
@@ -1172,95 +1273,104 @@ export default function App() {
               className="w-full min-h-full touch-pan-y"
             >
               {tabAtual === "resumo" && (
-                <div className="p-3 space-y-5">
+                <div className="p-4 space-y-4">
                   {/* Card Principal: Balanço de Lucro Real */}
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-neutral-200/60 dark:border-white/10 transition-all hover:shadow-md relative overflow-hidden group"
+                    whileHover={{ scale: 0.99, translateY: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      vibrar(10);
+                      setIsBalancoModalOpen(true);
+                    }}
+                    className="bg-gradient-to-br from-primary-600 via-indigo-600 to-indigo-800 dark:from-primary-700 dark:via-indigo-800 dark:to-indigo-950 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl shadow-primary-500/30 border border-white/10 text-white transition-all hover:shadow-primary-500/40 relative overflow-hidden group cursor-pointer min-h-[280px] sm:min-h-[320px] flex items-center"
                   >
-                    <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity whitespace-nowrap">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/noise-pattern-with-subtle-cross-lines.png')] opacity-[0.05] mix-blend-overlay"></div>
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 whitespace-nowrap">
                       <TrendingUp
-                        size={64}
-                        strokeWidth={1}
-                        className="transform translate-x-4 -translate-y-4"
+                        size={150}
+                        strokeWidth={0.5}
+                        className="transform translate-x-10 -translate-y-10 text-white"
                       />
                     </div>
                     <div className="relative z-10 w-full">
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex justify-between items-start mb-10">
                         <div>
-                          <span className="text-gray-500 dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest block mb-0.5">
+                          <span className="text-white/60 text-[12px] font-black uppercase tracking-[0.3em] block mb-3">
                             Balanço Geral
                           </span>
-                          <span className="text-[10px] text-gray-400 font-medium capitalize">
-                            Referente a {new Date().toLocaleString("pt-BR", { month: "long" })}
+                          <span className={`text-4xl sm:text-7xl font-black tracking-tighter display-font leading-none ${lucroMes < 0 ? "text-red-300" : "text-white"}`}>
+                            {formatarMoeda(lucroMes)}
                           </span>
                         </div>
-                        <div
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest ${lucroMes >= 0 ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400" : "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}
-                        >
-                          {lucroMes >= 0 ? <ArrowUpRight size={10} strokeWidth={3} /> : <ArrowDownRight size={10} strokeWidth={3} />}
-                          {lucroMes >= 0 ? "Lucro" : "Prejuízo"}
+                        <div className="flex flex-col items-end gap-2">
+                          <div
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${lucroMes >= 0 ? "bg-white/20 text-white backdrop-blur-md" : "bg-red-500/40 text-white backdrop-blur-md"}`}
+                          >
+                            {lucroMes >= 0 ? <ArrowUpRight size={12} strokeWidth={3} /> : <ArrowDownRight size={12} strokeWidth={3} />}
+                            {lucroMes >= 0 ? "Superávit" : "Déficit"}
+                          </div>
+                          <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider pr-1">
+                            {new Date().toLocaleString("pt-BR", { month: "long" })}
+                          </span>
                         </div>
                       </div>
                       
-                      <div className="flex flex-col items-center justify-center mb-4 mt-2">
-                        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">Saldo Líquido</span>
-                        <span
-                          className={`text-3xl sm:text-4xl font-light tracking-tighter display-font text-center ${lucroMes < 0 ? "text-red-500" : "text-gray-900 dark:text-white"}`}
-                        >
-                          {formatarMoeda(lucroMes)}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 flex flex-col justify-center items-center">
-                          <div className="flex items-center gap-1.5 mb-2 text-green-600 dark:text-green-500">
-                            <div className="bg-green-100 dark:bg-green-900/30 p-1 rounded-md">
-                              <ArrowUpRight size={14} strokeWidth={3} />
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest">
-                              Entradas
-                            </span>
+                      <div className="grid grid-cols-2 gap-y-6 gap-x-8">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-300 opacity-90">
+                            <ArrowUpRight size={14} strokeWidth={3} /> Faturamento
                           </div>
-                          <span className="text-lg sm:text-xl font-semibold tracking-tight display-font text-gray-800 dark:text-gray-100">
+                          <div className="text-lg sm:text-xl font-bold tracking-tight display-font text-white">
                             {formatarMoeda(resumoMes.receitas)}
-                          </span>
+                          </div>
                         </div>
                         
-                        <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-800 flex flex-col justify-center items-center relative">
-                          <div className="flex items-center gap-1.5 mb-2 text-red-500 dark:text-red-400">
-                            <div className="bg-red-100 dark:bg-red-900/30 p-1 rounded-md">
-                              <ArrowDownRight size={14} strokeWidth={3} />
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest">
-                              Saídas
-                            </span>
+                        <div className="space-y-1 text-right sm:text-left">
+                          <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-red-300 opacity-90">
+                            <ArrowDownRight size={14} strokeWidth={3} /> Despesas
                           </div>
-                          <span className="text-lg sm:text-xl font-semibold tracking-tight display-font text-gray-800 dark:text-gray-100">
-                            {formatarMoeda(resumoMes.despesas)}
-                          </span>
-                          {totalCustosFixos > 0 && (
-                            <div className="absolute -bottom-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
-                              Fixos: {formatarMoeda(totalCustosFixos)}
+                          <div className="flex flex-col items-end">
+                            <div className="text-xl font-bold tracking-tight display-font text-white leading-none">
+                              {formatarMoeda(resumoMes.despesas)}
                             </div>
-                          )}
+                            {totalCustosFixos > 0 && <span className="text-[9px] text-white/40 mt-1 uppercase tracking-tighter font-bold">Fixos: {formatarMoeda(totalCustosFixos)}</span>}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="bg-primary-50/50 dark:bg-primary-900/10 p-3.5 rounded-2xl border border-primary-100/50 dark:border-primary-900/20 flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <TrendingUp size={14} className="text-primary-500" strokeWidth={2.5} />
-                            <span className="text-primary-600 dark:text-primary-400 text-[10px] font-bold uppercase tracking-widest">
-                              Projeção Mensal
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white/60">
+                            <TrendingUp size={12} strokeWidth={2.5} /> Previsto
+                          </div>
+                          <div className="text-lg sm:text-xl font-bold tracking-tight display-font text-white opacity-90">
+                            {formatarMoeda(projecaoMensal)}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 text-right sm:text-left">
+                          <div className="flex items-center justify-end gap-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white/60">
+                            Ritmo Diário 
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTempMeta(String(metaDiaria));
+                                setIsEditingMeta(true);
+                              }}
+                              className="ml-1 text-white/30 hover:text-white transition-colors"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-xl font-bold tracking-tight display-font text-white opacity-90">
+                              {formatarMoeda(mediaDiaria).replace("R$", "")}
+                            </span>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-white/10 text-white backdrop-blur-md border border-white/5">
+                              {Math.min(Math.round((ganhoHoje / metaDiaria) * 100), 100)}%
                             </span>
                           </div>
-                          <span className="text-[10px] text-primary-500/70 font-medium tracking-wide">Estimativa baseada em {new Date().getDate()} dias</span>
                         </div>
-                        <span className="text-xl font-semibold tracking-tight text-primary-700 dark:text-primary-300 display-font">
-                          {formatarMoeda(projecaoMensal)}
-                        </span>
                       </div>
                     </div>
                   </motion.div>
@@ -1269,108 +1379,97 @@ export default function App() {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.12 }}
-                    className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-neutral-200/60 dark:border-white/10"
+                    className="bg-white dark:bg-gray-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-neutral-200/60 dark:border-white/10 relative overflow-hidden"
                   >
-                    <div className="flex items-center gap-3 mb-4">
-                       <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center">
-                          <PieChartIcon size={20} />
-                       </div>
-                       <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 tracking-tight">Regra de Ouro (50/30/20)</h3>
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                         <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center shadow-sm">
+                            <PieChartIcon size={24} />
+                         </div>
+                         <div>
+                            <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Regra de Ouro</h3>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider whitespace-nowrap">Distribuição 50 | 30 | 20</p>
+                         </div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-white/5 px-3 py-1.5 rounded-full text-[10px] font-bold text-gray-500 flex items-center gap-1">
+                        <Info size={12} /> Sugestão
+                      </div>
                     </div>
                     
-                    <div className="space-y-4">
-                       <div>
-                         <div className="flex justify-between items-end mb-1">
-                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Essencial (50%)</span>
-                            <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{formatarMoeda(resumoMes.receitas * 0.5)}</span>
-                         </div>
-                         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner">
-                            <div className="bg-primary-500 h-full rounded-full" style={{ width: '50%' }}></div>
-                         </div>
+                    <div className="space-y-6">
+                       {/* Essencial */}
+                       <div className="group">
+                          <div className="flex justify-between items-end mb-2">
+                             <div className="flex flex-col">
+                                <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-0.5">Essencial</span>
+                                <span className="text-[10px] text-gray-400 font-medium italic">Necessidades básicas</span>
+                             </div>
+                             <div className="text-right shrink-0">
+                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
+                                  {formatarMoeda(gastoEssencial)} / <span className="text-gray-400">{formatarMoeda(resumoMes.receitas * 0.5)}</span>
+                                </div>
+                                <div className={`text-[10px] font-black ${(gastoEssencial > resumoMes.receitas * 0.5) ? 'text-red-500' : 'text-emerald-500'}`}>
+                                  {resumoMes.receitas > 0 ? ((gastoEssencial / resumoMes.receitas) * 100).toFixed(0) : 0}% atual
+                                </div>
+                             </div>
+                          </div>
+                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden shadow-inner flex p-0.5">
+                             <div 
+                               className={`h-full rounded-full transition-all duration-1000 ${gastoEssencial > resumoMes.receitas * 0.5 ? 'bg-red-500' : 'bg-indigo-500'}`} 
+                               style={{ width: `${resumoMes.receitas > 0 ? Math.min((gastoEssencial / resumoMes.receitas) * 100, 100) : 0}%` }}
+                             ></div>
+                          </div>
                        </div>
                        
-                       <div>
-                         <div className="flex justify-between items-end mb-1">
-                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Livre (30%)</span>
-                            <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{formatarMoeda(resumoMes.receitas * 0.3)}</span>
-                         </div>
-                         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner">
-                            <div className="bg-purple-500 h-full rounded-full" style={{ width: '30%' }}></div>
-                         </div>
+                       {/* Livre */}
+                       <div className="group">
+                          <div className="flex justify-between items-end mb-2">
+                             <div className="flex flex-col">
+                                <span className="text-[11px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-0.5">Livre</span>
+                                <span className="text-[10px] text-gray-400 font-medium italic">Estilo de vida & desejos</span>
+                             </div>
+                             <div className="text-right shrink-0">
+                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
+                                  {formatarMoeda(gastoLivre)} / <span className="text-gray-400">{formatarMoeda(resumoMes.receitas * 0.3)}</span>
+                                </div>
+                                <div className={`text-[10px] font-black ${(gastoLivre > resumoMes.receitas * 0.3) ? 'text-red-500' : 'text-emerald-500'}`}>
+                                  {resumoMes.receitas > 0 ? ((gastoLivre / resumoMes.receitas) * 100).toFixed(0) : 0}% atual
+                                </div>
+                             </div>
+                          </div>
+                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden shadow-inner flex p-0.5">
+                             <div 
+                               className={`h-full rounded-full transition-all duration-1000 ${gastoLivre > resumoMes.receitas * 0.3 ? 'bg-red-500' : 'bg-purple-500'}`} 
+                               style={{ width: `${resumoMes.receitas > 0 ? Math.min((gastoLivre / resumoMes.receitas) * 100, 100) : 0}%` }}
+                             ></div>
+                          </div>
                        </div>
 
-                       <div>
-                         <div className="flex justify-between items-end mb-1">
-                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Reserva (20%)</span>
-                            <span className="text-sm font-bold text-green-600 dark:text-green-500">{formatarMoeda(resumoMes.receitas * 0.2)}</span>
-                         </div>
-                         <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shadow-inner">
-                            <div className="bg-green-500 h-full rounded-full" style={{ width: '20%' }}></div>
-                         </div>
+                       {/* Reserva */}
+                       <div className="group">
+                          <div className="flex justify-between items-end mb-2">
+                             <div className="flex flex-col">
+                                <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-0.5">Reserva</span>
+                                <span className="text-[10px] text-gray-400 font-medium italic">Futuro & segurança</span>
+                             </div>
+                             <div className="text-right shrink-0">
+                                <div className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
+                                  {formatarMoeda(Math.max(0, resumoMes.receitas - resumoMes.despesas))} / <span className="text-gray-400">{formatarMoeda(resumoMes.receitas * 0.2)}</span>
+                                </div>
+                                <div className={`text-[10px] font-black ${(resumoMes.receitas - resumoMes.despesas >= resumoMes.receitas * 0.2) ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                   Meta: {formatarMoeda(resumoMes.receitas * 0.2)}
+                                </div>
+                             </div>
+                          </div>
+                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden shadow-inner flex p-0.5">
+                             <div 
+                               className="h-full rounded-full transition-all duration-1000 bg-emerald-500" 
+                               style={{ width: `${resumoMes.receitas > 0 ? Math.min((Math.max(0, resumoMes.receitas - resumoMes.despesas) / resumoMes.receitas) * 100, 100) : 0}%` }}
+                             ></div>
+                          </div>
                        </div>
                     </div>
                   </motion.div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/10 text-orange-500 rounded-xl flex items-center justify-center">
-                            <Target size={20} />
-                          </div>
-                          <button
-                            onClick={() => {
-                              setTempMeta(String(metaDiaria));
-                              setIsEditingMeta(true);
-                            }}
-                            className="p-2 -mr-2 text-gray-300 hover:text-primary-500 transition-colors"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        </div>
-                        <span className="text-gray-400 text-[11px] font-semibold  tracking-wider block mb-1">
-                          Atingimento
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-xl font-light text-gray-900 dark:text-white display-font block mb-3">
-                          {Math.min(
-                            Math.round((ganhoHoje / metaDiaria) * 100),
-                            100,
-                          )}
-                          %
-                        </span>
-                        <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${Math.min((ganhoHoje / metaDiaria) * 100, 100)}%`,
-                            }}
-                            className="h-full bg-orange-500 rounded-full"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/10 text-primary-500 rounded-xl flex items-center justify-center mb-4">
-                          <LineChart size={20} />
-                        </div>
-                        <span className="text-gray-400 text-[11px] font-semibold  tracking-wider block mb-1">
-                          Ritmo Médio
-                        </span>
-                      </div>
-                      <span className="text-xl font-light text-primary-600 dark:text-primary-400 display-font block mt-auto pt-4">
-                        {formatarMoeda(mediaDiaria).replace("R$", "")}
-                      </span>
-                    </motion.div>
-                  </div>
 
                   {/* Top Gastos - Inteligência de Categoria */}
                   <motion.div
@@ -1394,7 +1493,7 @@ export default function App() {
 
                     <div className="flex flex-col gap-3">
                       {topCategorias.length > 0 && (
-                        <div className="w-full h-28 outline-none focus:outline-none">
+                        <div className="w-full h-[220px] outline-none focus:outline-none mt-2">
                           <ResponsiveContainer
                             width="100%"
                             height="100%"
@@ -1448,8 +1547,8 @@ export default function App() {
                               />
                               <Bar
                                 dataKey="valor"
-                                radius={[0, 12, 12, 0]}
-                                barSize={24}
+                                radius={[0, 8, 8, 0]}
+                                barSize={28}
                                 isAnimationActive={true}
                                 animationDuration={1500}
                                 animationBegin={200}
@@ -1484,7 +1583,7 @@ export default function App() {
                         ) : (
                           topCategorias.map((cat, index) => (
                             <div
-                              key={cat.id}
+                              key={`resumo-cat-${cat.id}-${index}`}
                               className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl"
                             >
                               <div className="flex justify-between items-center mb-2">
@@ -1577,110 +1676,38 @@ export default function App() {
                     )}
                   </AnimatePresence>
 
-                  {/* Ações Rápidas */}
-                  <div>
-                     <h3 className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-3 px-1">Ações Rápidas</h3>
-                     <div className="grid grid-cols-4 gap-2">
-                        <button
-                          onClick={() => {
-                             vibrar(15);
-                             setTransacaoEmEdicao(null);
-                             setTabAtual("adicionar");
-                             // Ideally we would prefill "Combustível", but without changing add screen state we just route to it for now
-                          }}
-                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
-                        >
-                           <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 flex items-center justify-center mb-2 shadow-inner">
-                             <Droplet size={16} />
-                           </div>
-                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Gasolina</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                             vibrar(15);
-                             setTransacaoEmEdicao(null);
-                             setTabAtual("adicionar");
-                          }}
-                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
-                        >
-                           <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 flex items-center justify-center mb-2 shadow-inner">
-                             <Coffee size={16} />
-                           </div>
-                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Refeição</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                             vibrar(15);
-                             setTransacaoEmEdicao(null);
-                             setTabAtual("adicionar");
-                          }}
-                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
-                        >
-                           <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center mb-2 shadow-inner">
-                             <Wrench size={16} />
-                           </div>
-                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Manutenção</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                             vibrar(15);
-                             setTransacaoEmEdicao(null);
-                             setTabAtual("adicionar");
-                          }}
-                          className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md hover:-translate-y-0.5"
-                        >
-                           <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 flex items-center justify-center mb-2 shadow-inner">
-                             <Car size={16} />
-                           </div>
-                           <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Corridas</span>
-                        </button>
-                     </div>
-                  </div>
-
-                  {/* Balanços Rápidos */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <motion.div
-                      initial={{ scale: 0.95, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.15 }}
-                      className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-md flex flex-col justify-between"
-                    >
-                      <span className="text-[11px] font-semibold text-gray-400  tracking-wider block mb-4">
-                        Mês Atual
-                      </span>
-                      <div>
-                        <div className="text-xl font-light text-primary-600 dark:text-primary-400 display-font">
-                          {formatarMoeda(
-                            resumoMes.receitas - resumoMes.despesas,
-                          )}
+                  {/* Balanço Mês Atual e Anterior */}
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                    className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-neutral-200/60 dark:border-white/10 shadow-sm"
+                  >
+                    <div className="grid grid-cols-2 divide-x divide-gray-100 dark:divide-gray-800 pr-2">
+                      <div className="pr-4">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                          Mês Atual
+                        </span>
+                        <div className="text-lg sm:text-xl font-semibold text-primary-600 dark:text-primary-400 display-font leading-none mb-1">
+                          {formatarMoeda(resumoMes.receitas - resumoMes.despesas)}
                         </div>
-                        <div className="text-xs font-medium text-gray-400  tracking-widest mt-2 block">
+                        <div className="text-[10px] font-medium text-gray-400 tracking-wide">
                           Bruto: {formatarMoeda(resumoMes.receitas)}
                         </div>
                       </div>
-                    </motion.div>
-                    <motion.div
-                      initial={{ scale: 0.95, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                      className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100/50 dark:border-gray-800/50 shadow-sm flex flex-col justify-between"
-                    >
-                      <span className="text-[11px] font-semibold text-gray-400  tracking-wider block mb-4">
-                        Mês Anterior
-                      </span>
-                      <div>
-                        <div className="text-xl font-light text-gray-500 dark:text-gray-400 display-font">
-                          {formatarMoeda(
-                            resumoMesPassado.receitas -
-                              resumoMesPassado.despesas,
-                          )}
+                      <div className="pl-4">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                          Mês Anterior
+                        </span>
+                        <div className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 display-font leading-none mb-1">
+                          {formatarMoeda(resumoMesPassado.receitas - resumoMesPassado.despesas)}
                         </div>
-                        <div className="text-xs font-medium text-gray-400  tracking-widest mt-2 block">
+                        <div className="text-[10px] font-medium text-gray-400 tracking-wide">
                           Bruto: {formatarMoeda(resumoMesPassado.receitas)}
                         </div>
                       </div>
-                    </motion.div>
-                  </div>
+                    </div>
+                  </motion.div>
 
                   {/* Fluxo de Caixa (7 Dias) e Receita por Fonte */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
@@ -1709,7 +1736,7 @@ export default function App() {
                           </div>
                         </div>
                       </div>
-                      <div className="h-32 w-full outline-none focus:outline-none">
+                      <div className="h-[220px] w-full outline-none focus:outline-none mt-2">
                         <ResponsiveContainer
                           width="100%"
                           height="100%"
@@ -1781,9 +1808,9 @@ export default function App() {
                               </linearGradient>
                             </defs>
                             <CartesianGrid
-                              strokeDasharray="4 4"
+                              strokeDasharray="3 3"
                               vertical={false}
-                              strokeOpacity={isDarkMode ? 0.1 : 0.4}
+                              strokeOpacity={isDarkMode ? 0.05 : 0.15}
                               stroke={isDarkMode ? "#ffffff" : "#cbd5e1"}
                             />
                             <XAxis
@@ -1804,7 +1831,7 @@ export default function App() {
                               }
                             />
                             <Area
-                              type="natural"
+                              type="monotoneX"
                               dataKey="receitas"
                               stroke="#2563EB"
                               strokeWidth={3}
@@ -1813,10 +1840,10 @@ export default function App() {
                               name="Receitas"
                               isAnimationActive={true}
                               animationDuration={1200}
-                              activeDot={{ r: 6, strokeWidth: 0, fill: '#2563EB' }}
+                              activeDot={{ r: 6, fill: '#2563EB', stroke: '#fff', strokeWidth: 2 }}
                             />
                             <Area
-                              type="natural"
+                              type="monotoneX"
                               dataKey="despesas"
                               stroke="#DC2626"
                               strokeWidth={3}
@@ -1825,10 +1852,10 @@ export default function App() {
                               name="Despesas"
                               isAnimationActive={true}
                               animationDuration={1200}
-                              activeDot={{ r: 6, strokeWidth: 0, fill: '#DC2626' }}
+                              activeDot={{ r: 6, fill: '#DC2626', stroke: '#fff', strokeWidth: 2 }}
                             />
                             <Area
-                              type="natural"
+                              type="monotoneX"
                               dataKey="lucro"
                               stroke="#10B981"
                               strokeWidth={3}
@@ -1837,7 +1864,7 @@ export default function App() {
                               name="Lucro Líquido"
                               isAnimationActive={true}
                               animationDuration={1200}
-                              activeDot={{ r: 6, strokeWidth: 0, fill: '#10B981' }}
+                              activeDot={{ r: 6, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
                             />
                           </AreaChart>
                         </ResponsiveContainer>
@@ -1862,7 +1889,7 @@ export default function App() {
                         </div>
                         <ListIcon size={16} className="text-gray-400 group-hover:text-green-500 transition-colors" />
                       </div>
-                      <div className="h-32 w-full outline-none focus:outline-none">
+                      <div className="h-[220px] w-full outline-none focus:outline-none mt-2">
                         <ResponsiveContainer
                           width="100%"
                           height="100%"
@@ -1943,7 +1970,7 @@ export default function App() {
                         </span>
                       </div>
                     </div>
-                    <div className="h-32 w-full outline-none focus:outline-none">
+                    <div className="h-[220px] w-full outline-none focus:outline-none mt-2">
                       <ResponsiveContainer
                         width="100%"
                         height="100%"
@@ -1987,8 +2014,8 @@ export default function App() {
                           />
                           <Bar
                             dataKey="valor"
-                            radius={[8, 8, 0, 0]}
-                            barSize={24}
+                            radius={[6, 6, 0, 0]}
+                            barSize={32}
                             isAnimationActive={true}
                             animationBegin={100}
                           >
@@ -2022,7 +2049,7 @@ export default function App() {
                 </div>
               )}
               {tabAtual === "historico" && (
-                <div className="p-3 space-y-6">
+                <div className="p-4 space-y-4">
                   {/* Simplified Filter */}
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -2057,7 +2084,7 @@ export default function App() {
                     </div>
                   ) : (
                     historicoAgrupado.grupos.map((grupo, gIdx) => (
-                      <div key={grupo.id} className="space-y-3">
+                      <div key={`grupo-${grupo.id}-${gIdx}`} className="space-y-3">
                         <div className="flex justify-between items-center px-1">
                           <span className="text-[11px] font-semibold text-gray-500  tracking-wider">
                             {grupo.label}
@@ -2069,9 +2096,9 @@ export default function App() {
                           </span>
                         </div>
                         <div className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden divide-y divide-gray-50 dark:divide-gray-800/50 shadow-sm">
-                          {grupo.transacoes.map((t) => (
+                          {grupo.transacoes.map((t, tIdx) => (
                             <div
-                              key={t.id}
+                              key={`${grupo.id}-${t.id}-${tIdx}`}
                               className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
                             >
                               <div className="flex items-center gap-2">
@@ -2092,8 +2119,8 @@ export default function App() {
                                         Fixo
                                       </span>
                                     )}
-                                    {t.tags && t.tags.length > 0 && t.tags.map(tag => (
-                                      <span key={tag} className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                                    {t.tags && t.tags.length > 0 && t.tags.map((tag, tagIdx) => (
+                                      <span key={`${t.id}-tag-${tag}-${tagIdx}`} className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
                                         #{tag}
                                       </span>
                                     ))}
@@ -2227,738 +2254,507 @@ export default function App() {
         </nav>
 
         <AnimatePresence>
-          {isDespesasModalOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
-              onClick={() => setIsDespesasModalOpen(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-5 sm:p-6 shadow-2xl relative border border-gray-100 dark:border-gray-800 max-h-[85vh] overflow-y-auto custom-scrollbar"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-6 sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md pt-1 pb-3 z-10 border-b border-gray-100 dark:border-gray-800/60">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                       <BarChart3 size={20} className="text-primary-500" />
-                       Todas as Despesas
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1 font-medium">Neste mês</p>
+          <ModalPage
+            key="modal-despesas"
+            isOpen={isDespesasModalOpen}
+            onClose={() => setIsDespesasModalOpen(false)}
+            title="Todas as Despesas"
+            subtitle="Neste mês"
+            icon={BarChart3}
+          >
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {todasCategoriasGastos.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-sm font-medium">
+                  Nenhuma despesa registrada.
+                </div>
+              ) : (
+                todasCategoriasGastos.map((cat, index) => (
+                  <div key={`modal-cat-${cat.id}-${index}`} className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors px-2">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: ["#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EC4899", "#6366F1", "#14B8A6"][index % 8]}}>
+                         {cat.nome.substring(0,2).toUpperCase()}
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{cat.nome}</p>
+                         <p className="text-xs text-gray-400 font-medium">{cat.pct.toFixed(1)}% do total</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-sm font-bold text-red-500">{formatarMoeda(cat.valor)}</p>
+                     </div>
                   </div>
-                  <button
-                    onClick={() => setIsDespesasModalOpen(false)}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-500 rounded-full transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-                
-                <div className="space-y-3">
-                  {todasCategoriasGastos.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400 text-sm font-medium">
-                      Nenhuma despesa registrada.
-                    </div>
-                  ) : (
-                    todasCategoriasGastos.map((cat, index) => (
-                      <div key={cat.id} className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl flex items-center justify-between group hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors">
-                         <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: ["#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EC4899", "#6366F1", "#14B8A6"][index % 8]}}>
-                             {cat.nome.substring(0,2).toUpperCase()}
-                           </div>
-                           <div>
-                             <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{cat.nome}</p>
-                             <p className="text-xs text-gray-400 font-medium">{cat.pct.toFixed(1)}% do total</p>
-                           </div>
-                         </div>
-                         <div className="text-right">
-                           <p className="text-sm font-bold text-red-500">{formatarMoeda(cat.valor)}</p>
-                         </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
+                ))
+              )}
+            </div>
+          </ModalPage>
 
-          {isReceitasModalOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
-              onClick={() => setIsReceitasModalOpen(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-5 sm:p-6 shadow-2xl relative border border-gray-100 dark:border-gray-800 max-h-[85vh] overflow-y-auto custom-scrollbar"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-6 sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md pt-1 pb-3 z-10 border-b border-gray-100 dark:border-gray-800/60">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                       <PieChartIcon size={20} className="text-green-500" />
-                       Fontes de Receita
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1 font-medium">Neste mês</p>
-                  </div>
-                  <button
-                    onClick={() => setIsReceitasModalOpen(false)}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-500 rounded-full transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+          <ModalPage
+            key="modal-balanco"
+            isOpen={isBalancoModalOpen}
+            onClose={() => setIsBalancoModalOpen(false)}
+            title="Detalhamento do Balanço"
+            subtitle="Visão analítica completa do período atual"
+            icon={Wallet}
+          >
+            <div className="space-y-0 divide-y divide-gray-100 dark:divide-gray-800/50">
+              {/* Resumo de Destaque Central */}
+              <div className="py-10 flex flex-col items-center text-center">
+                <span className="text-[11px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.25em] mb-3">Saldo Disponível no Mês</span>
+                <span className={`text-6xl font-light tracking-tighter display-font mb-8 transition-colors ${lucroMes < 0 ? "text-red-500" : "text-gray-900 dark:text-white"}`}>
+                  {formatarMoeda(lucroMes)}
+                </span>
                 
-                <div className="space-y-3">
-                  {receitaPorFonte.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400 text-sm font-medium">
-                      Nenhuma receita registrada.
-                    </div>
-                  ) : (
-                    receitaPorFonte.map((fonte, index) => (
-                      <div key={fonte.id} className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl flex items-center justify-between group hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors">
-                         <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm" style={{ backgroundColor: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"][index % 5]}}>
-                             {fonte.nome.substring(0,2).toUpperCase()}
-                           </div>
-                           <div>
-                             <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{fonte.nome}</p>
-                             <p className="text-xs text-gray-400 font-medium">{fonte.pct.toFixed(1)}% do total</p>
-                           </div>
+                <div className="w-full grid grid-cols-2 gap-12 px-6">
+                   <div className="text-center group">
+                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.15em] block mb-2 group-hover:text-emerald-500 transition-colors">Entradas Totais</span>
+                     <div className="flex flex-col items-center">
+                       <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-500 display-font">{formatarMoeda(resumoMes.receitas)}</span>
+                       {resumoMesPassado.receitas > 0 && (
+                         <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold ${(resumoMes.receitas / resumoMesPassado.receitas) >= 1 ? 'text-emerald-500' : 'text-red-400'}`}>
+                           {(resumoMes.receitas / resumoMesPassado.receitas) >= 1 ? <ArrowUpRight size={10} strokeWidth={3} /> : <ArrowDownRight size={10} strokeWidth={3} />}
+                           {Math.abs((resumoMes.receitas / resumoMesPassado.receitas - 1) * 100).toFixed(0)}% vs anterior
                          </div>
-                         <div className="text-right">
-                           <p className="text-sm font-bold text-green-500">{formatarMoeda(fonte.valor)}</p>
+                       )}
+                     </div>
+                   </div>
+                   <div className="text-center group">
+                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.15em] block mb-2 group-hover:text-red-500 transition-colors">Saídas Totais</span>
+                     <div className="flex flex-col items-center">
+                       <span className="text-lg sm:text-xl font-bold text-red-500 dark:text-red-400 display-font">{formatarMoeda(resumoMes.despesas)}</span>
+                       {resumoMesPassado.despesas > 0 && (
+                         <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold ${(resumoMes.despesas / resumoMesPassado.despesas) <= 1 ? 'text-emerald-500' : 'text-red-400'}`}>
+                           {(resumoMes.despesas / resumoMesPassado.despesas) <= 1 ? <ArrowDownRight size={10} strokeWidth={3} /> : <ArrowUpRight size={10} strokeWidth={3} />}
+                           {Math.abs((resumoMes.despesas / resumoMesPassado.despesas - 1) * 100).toFixed(0)}% vs anterior
                          </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-
-          {isMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
-                className="bg-white dark:bg-gray-900 w-full max-w-xs rounded-xl p-3 shadow-lg relative border dark:border-gray-800"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  onClick={() => setIsMenuOpen(false)}
-                  className="absolute top-4 right-4 p-1 bg-gray-100 dark:bg-gray-800 rounded-full border dark:border-gray-700"
-                >
-                  <X size={18} />
-                </button>
-                <h2 className="font-medium mb-4 text-lg">Configurações</h2>
-                
-                <div className="mb-6 space-y-3">
-                   <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Cor do Tema</h3>
-                   <div className="flex justify-between gap-2">
-                     <button onClick={() => setCorTema("blue")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "blue" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#3b82f6" }}></div>
-                     </button>
-                     <button onClick={() => setCorTema("purple")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "purple" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#a855f7" }}></div>
-                     </button>
-                     <button onClick={() => setCorTema("green")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "green" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#22c55e" }}></div>
-                     </button>
-                     <button onClick={() => setCorTema("orange")} className={`w-full py-2 rounded-xl border flex items-center justify-center transition-colors ${corTema === "orange" ? "bg-primary-100 border-primary-500 dark:bg-primary-900/30" : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}`}>
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#f97316" }}></div>
-                     </button>
+                       )}
+                     </div>
                    </div>
                 </div>
+              </div>
 
-                <div className="space-y-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Dados e Backup</h3>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      const blob = new Blob([JSON.stringify(transacoes)], {
-                        type: "application/json",
-                      });
-                      const a = document.createElement("a");
-                      a.href = URL.createObjectURL(blob);
-                      a.download = `backup_${getLocalISODate()}.json`;
-                      a.click();
-                      setIsMenuOpen(false);
-                      mostrarToast("Backup concluído");
-                    }}
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
-                  >
-                    <Download size={18} className="text-primary-500" /> Salvar
-                    Backup
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
-                  >
-                    <Upload size={18} className="text-green-500" /> Restaurar
-                    Backup
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                        exportarCSV();
-                        setIsMenuOpen(false);
-                        mostrarToast("Planilha CSV exportada!");
-                    }}
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
-                  >
-                    <FileText size={18} className="text-purple-500" /> Exportar para CSV
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                        gerarRelatorioPDF();
-                        setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm font-medium border border-gray-100 dark:border-gray-700"
-                  >
-                    <FileText size={18} className="text-primary-500" /> Relatório Profissional (PDF)
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                        if (confirm("Você tem certeza que deseja deletar TODAS as transações? Isso não pode ser desfeito.")) {
-                            setTransacoes([]);
-                            setIsMenuOpen(false);
-                            mostrarToast("Todos os dados foram apagados.", "sucesso");
-                        }
-                    }}
-                    className="w-full flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/10 rounded-xl text-sm font-medium border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 mt-4"
-                  >
-                    <Trash2 size={18} /> Limpar Todos os Dados
-                  </motion.button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".json"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        try {
-                          const data = JSON.parse(ev.target?.result as string);
-                          setTransacoes(
-                            Array.isArray(data)
-                              ? data.map(higienizarTransacao)
-                              : [],
-                          );
-                          mostrarToast("Dados restaurados");
-                        } catch {
-                          mostrarToast("Erro no arquivo", "erro");
-                        }
-                        setIsMenuOpen(false);
-                      };
-                      reader.readAsText(file);
-                    }}
-                  />
+              {/* Lista de Métricas Estruturadas */}
+              <div className="divide-y divide-gray-50 dark:divide-gray-800/20">
+                {/* Projeção */}
+                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                      <TrendingUp size={22} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Projeção Mensal</span>
+                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Estimativa baseada no ritmo hoje</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xl font-bold text-primary-600 dark:text-primary-400 display-font block leading-none">{formatarMoeda(projecaoMensal)}</span>
+                  </div>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
+
+                {/* Ritmo Diário */}
+                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                      <Target size={22} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Ritmo Diário</span>
+                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Faturamento médio / dia</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xl font-bold text-orange-600 dark:text-orange-400 display-font block leading-none">{formatarMoeda(mediaDiaria)}</span>
+                  </div>
+                </div>
+
+                {/* Ticket Médio */}
+                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                      <Zap size={22} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Ticket Médio</span>
+                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Valor médio por entrada</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 display-font block leading-none">{formatarMoeda(ticketMedio)}</span>
+                  </div>
+                </div>
+
+                {/* Eficiência */}
+                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                      <Activity size={22} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Eficiência ROC</span>
+                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Retorno vs Despesa</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400 display-font block leading-none">{(indiceEficiencia || 0).toFixed(2)}x</span>
+                  </div>
+                </div>
+
+                {/* Custos Fixos */}
+                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                      <Lock size={22} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Custos Fixos</span>
+                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Comprometimento recorrente</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xl font-bold text-red-600 dark:text-red-400 display-font block leading-none">{formatarMoeda(totalCustosFixos)}</span>
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{(totalCustosFixos / (resumoMes.despesas || 1) * 100).toFixed(0)}% do operacional</span>
+                  </div>
+                </div>
+
+                {/* Consistência */}
+                <div className="py-6 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-all px-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                      <CalendarIcon size={22} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Consistência Semanal</span>
+                      <span className="text-[11px] text-gray-400 font-medium tracking-wide">Score de fôlego (7 dias)</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xl font-bold text-pink-600 dark:text-pink-400 display-font block leading-none">{diasLucrativos} / 7</span>
+                    <div className="flex gap-1 mt-1.5 justify-end">
+                       {[...Array(7)].map((_, i) => (
+                         <div key={`dot-${i}`} className={`w-1.5 h-1.5 rounded-full ${i < diasLucrativos ? 'bg-pink-500' : 'bg-gray-200 dark:bg-gray-800'}`} />
+                       ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ModalPage>
+
+          <ModalPage
+            key="modal-receitas"
+            isOpen={isReceitasModalOpen}
+            onClose={() => setIsReceitasModalOpen(false)}
+            title="Fontes de Receita"
+            subtitle="Neste mês"
+            icon={TrendingUp}
+            primaryColor="text-green-500"
+          >
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {receitaPorFonte.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-sm font-medium">
+                  Nenhuma receita registrada.
+                </div>
+              ) : (
+                receitaPorFonte.map((fonte, index) => (
+                  <div key={`modal-fonte-${fonte.id}-${index}`} className="py-4 flex items-center justify-between group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors px-2">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm" style={{ backgroundColor: ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"][index % 5]}}>
+                         {fonte.nome.substring(0,2).toUpperCase()}
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{fonte.nome}</p>
+                         <p className="text-xs text-gray-400 font-medium">{fonte.pct.toFixed(1)}% do total</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-sm font-bold text-green-600">{formatarMoeda(fonte.valor)}</p>
+                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ModalPage>
+
+          <ModalPage
+            key="modal-configuracoes"
+            isOpen={isMenuOpen}
+            onClose={() => setIsMenuOpen(false)}
+            title="Configurações"
+            subtitle="Gerencie sua experiência"
+            icon={Settings}
+          >
+            <div className="space-y-10 py-4">
+               <div>
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 px-1">Aparência Visual</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {["blue", "purple", "green", "orange"].map((cor) => (
+                      <button
+                        key={cor}
+                        onClick={() => setCorTema(cor as any)}
+                        className={`py-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${corTema === cor ? "bg-primary-50/50 dark:bg-primary-900/20 border-primary-500 shadow-sm ring-4 ring-primary-500/10" : "bg-transparent border-gray-100 dark:border-gray-800 text-gray-400 hover:border-gray-200 dark:hover:border-gray-700"}`}
+                      >
+                        <div className="w-6 h-6 rounded-full shadow-inner" style={{ backgroundColor: cor === 'blue' ? '#3b82f6' : cor === 'purple' ? '#a855f7' : cor === 'green' ? '#22c55e' : '#f97316' }} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{cor}</span>
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 px-1">Gestão de Dados</h4>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([JSON.stringify(transacoes)], { type: "application/json" });
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `backup_${getLocalISODate()}.json`;
+                        a.click();
+                        mostrarToast("Backup exportado!");
+                      }}
+                      className="w-full flex items-center justify-between py-5 group transition-all px-1"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Download size={18} />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Exportar Backup</span>
+                          <span className="text-[11px] text-gray-400 font-medium">Baixar arquivo JSON</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-between py-5 group transition-all px-1"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Upload size={18} />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Restaurar Dados</span>
+                          <span className="text-[11px] text-gray-400 font-medium">Carregar backup anterior</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (confirm("Deseja apagar todos os dados permanentemente?")) {
+                          setTransacoes([]);
+                          mostrarToast("Todos os dados apagados.");
+                        }
+                      }}
+                      className="w-full flex items-center justify-between py-5 group px-1"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Trash2 size={18} />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-sm font-bold text-red-600 block tracking-tight">Limpar Tudo</span>
+                          <span className="text-[11px] text-red-400/50 font-medium tracking-tight">Apagar permanentemente</span>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+               </div>
+
+               <div className="pt-8 border-t border-gray-100 dark:border-gray-800/50 flex flex-col items-center text-center">
+                  <div className="w-14 h-14 bg-gradient-to-tr from-primary-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-lg shadow-primary-500/20 mb-4 scale-90">
+                    <RainbowAIIcon size={30} />
+                  </div>
+                  <p className="text-base font-black text-gray-900 dark:text-white tracking-tight leading-none">MeuCaixa <span className="text-primary-500">Financeiro</span></p>
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-3">Versão 2.5.0 STABLE</p>
+               </div>
+            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".json"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  try {
+                    const data = JSON.parse(ev.target?.result as string);
+                    setTransacoes(Array.isArray(data) ? data.map(higienizarTransacao) : []);
+                    mostrarToast("Dados restaurados");
+                  } catch { mostrarToast("Erro no arquivo", "erro"); }
+                };
+                reader.readAsText(file);
+              }}
+            />
+          </ModalPage>
         </AnimatePresence>
 
         <AnimatePresence>
-          {isAIOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[250] flex items-center justify-center p-3 bg-black/60 backdrop-blur-md"
-              onClick={() => setIsAIOpen(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, y: 30 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 30 }}
-                className="bg-white dark:bg-gray-950 w-full max-w-2xl rounded-xl overflow-hidden flex flex-col h-[90vh] shadow-[0_0_50px_-12px_rgba(59,130,246,0.3)] border dark:border-gray-800"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-3 bg-gradient-to-br from-primary-700 via-indigo-800 to-primary-900 text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-3 opacity-10 animate-pulse scale-150 rotate-12">
-                    <RainbowAIIcon size={120} />
-                  </div>
-
-                  <div className="relative z-10">
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                          <RainbowAIIcon size={20} />
-                        </div>
-                        <span className="text-[11px] font-medium  tracking-normal text-primary-100">
-                          Consultoria Nativa
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => setIsAIOpen(false)}
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-end justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm shadow-blue-500/20 flex items-center justify-center shrink-0">
-                          <Wallet size={20} strokeWidth={2.5} className="text-primary-600" />
-                        </div>
-                        <div>
-                          <h2 className="text-2xl font-extrabold tracking-tighter mb-0.5 leading-none">
-                            Meu<span className="text-primary-200">Caixa</span>
-                          </h2>
-                          <p className="text-[10px] font-medium text-primary-200 tracking-widest uppercase">
-                            Consultoria Financeira
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex bg-white/10 backdrop-blur-xl p-1 rounded-xl border border-white/10">
-                        <button
-                          onClick={() => setActiveAIView("insights")}
-                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "insights" ? "bg-white text-primary-600" : "text-primary-100"}`}
-                        >
-                          Insights
-                        </button>
-                        <button
-                          onClick={() => setActiveAIView("chat")}
-                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "chat" ? "bg-white text-primary-600" : "text-primary-100"}`}
-                        >
-                          Chat
-                        </button>
-                        <button
-                          onClick={() => setActiveAIView("settings")}
-                          className={`px-3 py-1.5 rounded-xl text-[11px] font-medium  tracking-widest transition-all ${activeAIView === "settings" ? "bg-white text-primary-600" : "text-primary-100"}`}
-                        >
-                          <Settings size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className="flex-1 overflow-y-auto p-3 space-y-6 bg-gray-50/50 dark:bg-gray-950 no-scrollbar"
-                  ref={chatContainerRef}
-                >
+          <ModalPage
+            key="modal-ai"
+            isOpen={isAIOpen}
+            onClose={() => setIsAIOpen(false)}
+            title="Sua Consultoria Nativa"
+            subtitle="Inteligência Financeira"
+            icon={RainbowAIIcon}
+            primaryColor="text-primary-600"
+          >
+            <div className="flex flex-col h-[80vh] overflow-hidden">
+              <div className="flex justify-center gap-6 border-b border-gray-100 dark:border-gray-800/50 pb-4 mb-6">
+                 {["insights", "chat", "settings"].map((view) => (
+                    <button
+                      key={view}
+                      onClick={() => setActiveAIView(view as any)}
+                      className={`px-1 py-1 text-[11px] font-black uppercase tracking-[0.2em] transition-all relative ${activeAIView === view ? "text-primary-600 dark:text-primary-400" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
+                    >
+                      {view === 'settings' ? <Settings size={14} /> : view}
+                      {activeAIView === view && (
+                        <motion.div layoutId="activeAI" className="absolute -bottom-4 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full" />
+                      )}
+                    </button>
+                 ))}
+              </div>
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1" ref={chatContainerRef}>
                   {activeAIView === "insights" ? (
-                    <>
-                      <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-primary-50 dark:border-primary-900/20 shadow-md shadow-primary-500/5 mb-2 relative overflow-hidden group">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary-500/5 rounded-full blur-2xl group-hover:bg-primary-500/10 transition-all" />
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20">
-                            <Zap
-                              size={24}
-                              strokeWidth={3}
-                              className="animate-pulse"
-                            />
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-medium  tracking-widest text-primary-600/60 dark:text-primary-400/60 mb-0.5">
-                              Diagnóstico
-                            </p>
-                            <h3 className="text-sm font-medium text-gray-900 dark:text-white  tracking-tight">
-                              Visão Estratégica
-                            </h3>
-                          </div>
+                    <div className="space-y-6 pb-6">
+                      <div className="py-5 border-b border-gray-50 dark:border-gray-800/30 relative overflow-hidden group">
+                        <div className="flex items-center gap-3 mb-3">
+                           <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center">
+                              <Zap size={20} strokeWidth={2.5} />
+                           </div>
+                           <h4 className="text-sm font-black tracking-tight">Diagnóstico Estratégico</h4>
                         </div>
-                        <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300 leading-relaxed italic border-l-4 border-primary-500 pl-4 py-1">
-                          "Sistema operacional estável. Iniciei a varredura
-                          profunda em {transacoesMes.length} transações.
-                          Encontrei padrões de rentabilidade que exigem sua
-                          atenção imediata."
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed italic pl-12">
+                          "Varredura concluída em {transacoesMes.length} transações. Padrões identificados."
                         </p>
                       </div>
-
-                      <div className="grid grid-cols-1 gap-2">
+                      
+                      <div className="divide-y divide-gray-50 dark:divide-gray-800/30">
                         {insights.map((insight, idx) => (
-                          <motion.div
-                            key={idx}
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.1 + idx * 0.1 }}
-                            className={`p-3 rounded-[2.2rem] border-2 relative overflow-hidden group shadow-sm ${
-                              insight.tipo === "alerta"
-                                ? "bg-red-50/30 dark:bg-red-900/10 border-red-100/50 dark:border-red-900/20"
-                                : insight.tipo === "sucesso"
-                                  ? "bg-green-50/30 dark:bg-green-900/10 border-green-100/50 dark:border-green-900/20"
-                                  : insight.tipo === "dica"
-                                    ? "bg-yellow-50/30 dark:bg-yellow-900/10 border-yellow-100/50 dark:border-yellow-900/20"
-                                    : insight.tipo === "financeiro"
-                                      ? "bg-purple-50/30 dark:bg-purple-900/10 border-purple-100/50 dark:border-purple-900/20"
-                                      : "bg-primary-50/30 dark:bg-primary-900/10 border-primary-100/50 dark:border-primary-900/20"
-                            }`}
+                          <div
+                            key={`ai-insight-${idx}`}
+                            className="py-5 flex items-start gap-4 group"
                           >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${
-                                  insight.tipo === "alerta"
-                                    ? "bg-red-500 text-white shadow-red-500/20"
-                                    : insight.tipo === "sucesso"
-                                      ? "bg-green-600 text-white shadow-green-600/20"
-                                      : insight.tipo === "dica"
-                                        ? "bg-yellow-600 text-white shadow-yellow-600/20"
-                                        : insight.tipo === "financeiro"
-                                          ? "bg-purple-600 text-white shadow-purple-600/20"
-                                          : "bg-primary-600 text-white shadow-primary-600/20"
-                                }`}
-                              >
-                                {insight.tipo === "alerta" && (
-                                  <AlertTriangle size={22} strokeWidth={2.5} />
-                                )}
-                                {insight.tipo === "sucesso" && (
-                                  <CheckCircle2 size={22} strokeWidth={2.5} />
-                                )}
-                                {insight.tipo === "dica" && (
-                                  <Lightbulb size={22} strokeWidth={2.5} />
-                                )}
-                                {insight.tipo === "financeiro" && (
-                                  <Wallet size={22} strokeWidth={2.5} />
-                                )}
-                                {insight.tipo === "info" && (
-                                  <Zap size={22} strokeWidth={2.5} />
-                                )}
-                              </div>
-
-                              <div className="flex-1">
-                                <h4
-                                  className={`text-xs font-medium  tracking-normal mb-1.5 ${
-                                    insight.tipo === "alerta"
-                                      ? "text-red-700 dark:text-red-400"
-                                      : insight.tipo === "sucesso"
-                                        ? "text-green-700 dark:text-green-400"
-                                        : insight.tipo === "dica"
-                                          ? "text-yellow-700 dark:text-yellow-400"
-                                          : insight.tipo === "financeiro"
-                                            ? "text-purple-700 dark:text-purple-400"
-                                            : "text-primary-700 dark:text-primary-400"
-                                  }`}
-                                >
-                                  {insight.titulo}
-                                </h4>
-                                <p className="text-[12px] font-medium leading-relaxed text-gray-700 dark:text-gray-300">
-                                  {insight.mensagem}
-                                </p>
-                              </div>
-                            </div>
-                          </motion.div>
+                             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
+                               insight.tipo === "alerta" ? "bg-red-50 dark:bg-red-900/20 text-red-500" : 
+                               insight.tipo === "sucesso" ? "bg-green-50 dark:bg-green-900/20 text-green-500" : 
+                               "bg-gray-50 dark:bg-gray-800 text-primary-500"
+                             }`}>
+                                {insight.tipo === "alerta" ? <AlertTriangle size={18} /> : <Zap size={18} />}
+                             </div>
+                             <div className="flex-1">
+                                <h5 className="text-sm font-bold text-gray-900 dark:text-white mb-1 tracking-tight">{insight.titulo}</h5>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{insight.mensagem}</p>
+                             </div>
+                          </div>
                         ))}
                       </div>
 
                       <button
                         onClick={async () => {
-                          mostrarToast("Recalculando padrões diagnósticos...", "info" as any);
+                          mostrarToast("Sincronizando...");
                           try {
-                            const novos = await gerarInsightsNativos(
-                              transacoes,
-                              metaDiaria,
-                              CATEGORIAS_RECEITA,
-                              CATEGORIAS_DESPESA,
-                              configAI,
-                            );
+                            const novos = await gerarInsightsNativos(transacoes, metaDiaria, CATEGORIAS_RECEITA, CATEGORIAS_DESPESA, configAI);
                             setInsights(novos);
-                            mostrarToast("Padrões diagnósticos atualizados!");
-                          } catch (error) {
-                            console.error(error);
-                            mostrarToast("Erro ao processar.", "erro");
-                          }
+                          } catch (e) { console.error(e); }
                         }}
-                        className="w-full py-3 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center gap-2 text-xs font-medium  tracking-normal text-primary-600 dark:text-primary-400 border-2 border-primary-100 dark:border-primary-900/30 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all shadow-lg shadow-primary-500/5 group"
+                        className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary-500/20 active:scale-[0.98] transition-all"
                       >
-                        <RefreshCcw
-                          size={18}
-                          className="group-active:rotate-180 transition-transform duration-700"
-                        />{" "}
-                        Sincronizar Novos Dados
+                        Recalcular Insights
                       </button>
-                    </>
+                    </div>
                   ) : activeAIView === "chat" ? (
-                    <div className="flex flex-col gap-3 min-h-full">
-                      {chatMessages.length === 0 && (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
-                          <motion.div
-                            animate={{
-                              scale: [1, 1.1, 1],
-                              rotate: [0, 5, -5, 0],
-                            }}
-                            transition={{ duration: 4, repeat: Infinity }}
-                            className="w-24 h-24 bg-gradient-to-tr from-primary-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/40 mb-4"
-                          >
-                            <RainbowAIIcon size={50} />
-                          </motion.div>
-                          <h3 className="text-lg font-medium dark:text-white mb-3  tracking-tight">
-                            Assistente Financeiro
-                          </h3>
-                          <p className="text-xs font-medium text-gray-400 leading-relaxed  tracking-normal max-w-[280px]">
-                            Pronto para análise situacional. Faça perguntas em texto
-                            para diagnósticos financeiros em tempo real.
-                          </p>
-
-                          <div className="mt-8 flex flex-wrap justify-center gap-2">
-                            <SugestaoPergunta texto="Quanto gastei com combustível?" />
-                            <SugestaoPergunta texto="Dicas para economizar" />
-                            <SugestaoPergunta texto="Minha meta atual" />
-                          </div>
-                        </div>
-                      )}
-
-                      {chatMessages.map((msg, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{
-                            opacity: 0,
-                            x: msg.role === "user" ? 20 : -20,
-                            scale: 0.9,
-                          }}
-                          animate={{ opacity: 1, x: 0, scale: 1 }}
-                          className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
-                        >
-                          <div
-                            className={`max-w-[85%] p-3 rounded-xl text-[12px] font-medium leading-relaxed shadow-md ${
-                              msg.role === "user"
-                                ? "bg-primary-600 text-white rounded-tr-none shadow-primary-600/10"
-                                : "bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-800 rounded-tl-none shadow-gray-200/5"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-2 opacity-50">
-                              {msg.role === "assistant" && (
-                                <div className="flex gap-1.5 items-center">
-                                  {msg.sentiment === "positivo" && (
-                                    <Smile
-                                      size={12}
-                                      className="text-green-500"
-                                    />
-                                  )}
-                                  {msg.sentiment === "negativo" && (
-                                    <Frown size={12} className="text-red-500" />
-                                  )}
-                                  {msg.sentiment === "neutro" && (
-                                    <Meh size={12} className="text-gray-400" />
-                                  )}
-                                  <span className="text-xs  font-medium tracking-widest">
-                                    MeuCaixa Assistant
-                                  </span>
-                                </div>
-                              )}
-                              {msg.role === "user" && (
-                                <span className="text-xs  font-medium tracking-widest">
-                                  Operador
-                                </span>
-                              )}
+                    <div className="space-y-6 pb-6">
+                       {chatMessages.length === 0 ? (
+                         <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                            <div className="w-20 h-20 bg-primary-50 dark:bg-primary-900/10 rounded-[2rem] flex items-center justify-center mb-6">
+                              <RainbowAIIcon size={40} className="text-primary-500 opacity-60" />
                             </div>
-                            <div className="markdown-body text-[12px]">
-                              <Markdown>{msg.content}</Markdown>
+                            <h4 className="text-lg font-black tracking-tight mb-2 italic">Como posso ajudar hoje?</h4>
+                            <p className="text-xs text-gray-400 font-medium leading-relaxed uppercase tracking-wider">Pergunte sobre seus gastos, economias ou peça dicas personalizadas.</p>
+                         </div>
+                       ) : (
+                         <div className="space-y-6">
+                           {chatMessages.map((m, i) => (
+                             <div key={`chat-msg-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                               <div className={`max-w-[85%] p-4 rounded-3xl text-[13px] font-medium leading-relaxed ${m.role === "user" ? "bg-primary-600 text-white rounded-tr-none shadow-xl shadow-primary-500/20" : "bg-gray-50 dark:bg-white/[0.03] text-gray-800 dark:text-gray-200 rounded-tl-none"}`}>
+                                 <Markdown>{m.content}</Markdown>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       )}
+                       {isAIThinking && (
+                          <div className="flex justify-start">
+                            <div className="bg-gray-50 dark:bg-white/[0.03] p-4 rounded-2xl rounded-tl-none flex gap-1.5 items-center">
+                               <span className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" />
+                               <span className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s'}} />
+                               <span className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s'}} />
                             </div>
                           </div>
-                        </motion.div>
-                      ))}
-
-                      {isAIThinking && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="flex gap-2 p-3 bg-gray-100 dark:bg-gray-900/50 rounded-xl w-fit"
-                        >
-                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce" />
-                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                          <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                        </motion.div>
-                      )}
+                       )}
                     </div>
                   ) : (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="space-y-6"
-                    >
-                      <div className="space-y-4">
-                        <h3 className="text-[11px] font-medium  tracking-normal text-gray-400 px-2">
-                          Nível de Detalhe
-                        </h3>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(
-                            [
-                              "resumido",
-                              "padrao",
-                              "detalhado",
-                            ] as NivelDetalheAI[]
-                          ).map((nivel) => (
-                            <button
-                              key={nivel}
-                              onClick={() =>
-                                setConfigAI({
-                                  ...configAI,
-                                  nivelDetalhe: nivel,
-                                })
-                              }
-                              className={`py-3 rounded-xl text-xs font-medium  tracking-widest border transition-all ${configAI.nivelDetalhe === nivel ? "bg-primary-600 text-white border-primary-600" : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-600 border-gray-100 dark:border-gray-800"}`}
-                            >
-                              {nivel}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <h3 className="text-[11px] font-medium  tracking-normal text-gray-400 px-2 mb-4">
-                          Preferências de Foco
-                        </h3>
-                        <button
-                          onClick={() =>
-                            setConfigAI({
-                              ...configAI,
-                              focarEmGanhos: !configAI.focarEmGanhos,
-                            })
-                          }
-                          className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-lg ${configAI.focarEmGanhos ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}
-                            >
-                              <TrendingUp size={16} />
+                    <div className="py-4 space-y-8">
+                       <div>
+                          <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 px-1">Configurações da Inteligência</h4>
+                          <div className="divide-y divide-gray-50 dark:divide-gray-800/30">
+                            <div className="py-5 flex items-center justify-between px-1">
+                               <div>
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight transition-colors">Focar em Ganhos</span>
+                                  <span className="text-xs text-gray-400 font-medium">Prioriza estratégias de faturamento</span>
+                               </div>
+                               <button 
+                                 onClick={() => setConfigAI({...configAI, focarEmGanhos: !configAI.focarEmGanhos})} 
+                                 className={`w-11 h-6 rounded-full p-1 transition-all duration-300 ${configAI.focarEmGanhos ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-800'}`}
+                               >
+                                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ${configAI.focarEmGanhos ? 'translate-x-5' : 'translate-x-0'}`} />
+                               </button>
                             </div>
-                            <span className="text-[11px] font-medium  tracking-widest text-gray-600 dark:text-gray-400">
-                              Priorizar Ganhos
-                            </span>
+
+                            <div className="py-5 flex items-center justify-between px-1 opacity-50 grayscale pointer-events-none">
+                               <div>
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white block tracking-tight">Análise Preditiva</span>
+                                  <span className="text-xs text-gray-400 font-medium">Previsões futuras (Premium)</span>
+                               </div>
+                               <div className="w-11 h-6 rounded-full bg-gray-200 dark:bg-gray-800 p-1">
+                                  <div className="w-4 h-4 bg-white rounded-full" />
+                               </div>
+                            </div>
                           </div>
-                          {configAI.focarEmGanhos ? (
-                            <ToggleRight className="text-primary-600" size={24} />
-                          ) : (
-                            <ToggleLeft className="text-gray-300" size={24} />
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            vibrar(15);
-                            setConfigAI({
-                              ...configAI,
-                              focarEmGastos: !configAI.focarEmGastos,
-                            });
-                          }}
-                          className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2 rounded-lg ${configAI.focarEmGastos ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-400"}`}
-                            >
-                              <AlertTriangle size={16} />
-                            </div>
-                            <span className="text-[11px] font-medium  tracking-widest text-gray-600 dark:text-gray-400">
-                              Priorizar Despesas
-                            </span>
-                          </div>
-                          {configAI.focarEmGastos ? (
-                            <ToggleRight className="text-primary-600" size={24} />
-                          ) : (
-                            <ToggleLeft className="text-gray-300" size={24} />
-                          )}
-                        </button>
-
-                        <div className="pt-4 border-t border-gray-100 dark:border-gray-800 mt-2 space-y-2">
-                          <h3 className="text-[11px] font-medium  tracking-normal text-gray-400 px-2 mb-2">
-                            Interface Sensorial
-                          </h3>
-
-                          <button
-                            onClick={() => {
-                              vibrar(20);
-                              setConfigAI({
-                                ...configAI,
-                                hapticosAtivos: !configAI.hapticosAtivos,
-                              });
-                            }}
-                            className="w-full p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 flex justify-between items-center"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`p-2 rounded-lg ${configAI.hapticosAtivos ? "bg-indigo-100 text-indigo-600" : "bg-gray-100 text-gray-400"}`}
-                              >
-                                <Activity size={16} />
-                              </div>
-                              <span className="text-[11px] font-medium  tracking-widest text-gray-600 dark:text-gray-400">
-                                Feedback Tátil
-                              </span>
-                            </div>
-                            {configAI.hapticosAtivos ? (
-                              <ToggleRight
-                                className="text-primary-600"
-                                size={24}
-                              />
-                            ) : (
-                              <ToggleLeft className="text-gray-300" size={24} />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="p-3 bg-primary-50 dark:bg-primary-900/10 rounded-xl border border-primary-100 dark:border-primary-900/20">
-                        <p className="text-[11px] font-medium text-primary-600 dark:text-primary-400 leading-relaxed text-center">
-                          Estas configurações são aplicadas instantaneamente e
-                          alteram a profundidade e o tom das análises geradas
-                          pelo Assistente.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-
-                {activeAIView === "chat" && (
-                  <div className="p-3 bg-white dark:bg-gray-950 border-t dark:border-gray-900">
-                    <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-[1.8rem] border border-gray-100 dark:border-gray-800 focus-within:border-primary-500/50 transition-colors">
-                      <input
-                        type="text"
-                        value={userInput}
-                        onChange={(e) => setUserInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSendToAI()}
-                        placeholder="Diga algo como 'Qual minha meta hoje?'"
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-xs font-medium px-3 dark:text-white placeholder:text-gray-400"
-                      />
-                      <button
-                        onClick={handleSendToAI}
-                        className="w-10 h-10 bg-primary-600 text-white rounded-[1.2rem] flex items-center justify-center hover:scale-[1.05] active:scale-95 transition-all shadow-lg shadow-primary-600/20"
-                      >
-                        <Send size={18} strokeWidth={3} />
-                      </button>
+                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+              </div>
 
-                <div className="p-3 bg-white dark:bg-gray-950 border-t dark:border-gray-900 flex justify-between items-center px-8">
-                  <div className="flex gap-1">
-                    <div className="w-1 h-1 rounded-full bg-primary-500"></div>
-                    <div className="w-1 h-1 rounded-full bg-primary-500 opacity-50"></div>
-                    <div className="w-1 h-1 rounded-full bg-primary-500 opacity-20"></div>
+              {activeAIView === "chat" && (
+                <div className="p-4 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-900">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      placeholder="Fale com sua consultora..."
+                      className="flex-1 h-12 px-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none focus:ring-2 ring-primary-500/20"
+                      onKeyPress={(e) => e.key === "Enter" && handleSendToAI()}
+                    />
+                    <button
+                      onClick={handleSendToAI}
+                      disabled={isAIThinking}
+                      className="w-12 h-12 bg-primary-600 text-white rounded-xl shadow-lg shadow-primary-600/20 flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
+                    >
+                      <Plus className="rotate-45" size={20} />
+                    </button>
                   </div>
-                  <p className="text-[11px] font-medium text-gray-300 dark:text-gray-800  tracking-normal">
-                    Motor Financeiro Local v2.0
-                  </p>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
+              )}
+            </div>
+          </ModalPage>
         </AnimatePresence>
       </div>
     </div>
@@ -3184,7 +2980,7 @@ function FormularioLancamento({
         <label className="text-[11px] font-semibold text-gray-400  tracking-wider mb-2 block uppercase">Tags (Centros de Custo)</label>
         <div className="flex flex-wrap gap-2 mb-2">
           {tags.map((tag, i) => (
-             <span key={i} className="bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 text-xs px-2.5 py-1 rounded-md flex items-center gap-1 font-medium">
+             <span key={`form-tag-${tag}-${i}`} className="bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 text-xs px-2.5 py-1 rounded-md flex items-center gap-1 font-medium">
                 #{tag}
                 <button onClick={() => setTags(tags.filter((_, idx) => idx !== i))} className="hover:text-primary-900 dark:hover:text-primary-100 ml-1">
                    <Plus size={12} className="rotate-45" />
