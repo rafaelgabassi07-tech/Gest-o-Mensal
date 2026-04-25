@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { Transacao, Categoria, ConfiguracaoAI, UserProfile } from "../types";
 
 export interface AIInsight {
@@ -54,80 +53,32 @@ export async function responderChat(
   historico: AIChatMessage[] = [],
 ): Promise<AIChatMessage> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("API Key not found");
+    let searchResults = "Nenhum resultado encontrado para a sua busca.";
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: mensagem })
+      });
+      const data = await res.json();
+      
+      if (data.results && data.results.length > 0) {
+        searchResults = "Aqui estão os resultados que encontrei na web:\n\n" + data.results.map((r: any) => `* **${r.title}**: ${r.snippet}\n(${r.link})`).join("\n\n");
+      }
+    } catch (e: any) {
+      searchResults = "Não foi possível acessar a internet no momento: " + e.message;
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-    
-    // Preparar contexto financeiro para a IA
-    const hojeStr = new Date().toISOString().split("T")[0];
-    const transacoesHoje = transacoes.filter(t => t.data === hojeStr);
-    const ganhosHoje = transacoesHoje.filter(t => t.tipo === "receita").reduce((a, b) => a + b.valor, 0);
-    const gastosHoje = transacoesHoje.filter(t => t.tipo === "despesa").reduce((a, b) => a + b.valor, 0);
-    const saldoTotal = transacoes.reduce((acc, t) => acc + (t.tipo === "receita" ? t.valor : -t.valor), 0);
-    
-    const systemInstruction = `Você é o Cérebro AutoCaixa v4.7, a inteligência central autônoma, sintonizada com a realidade das ruas e da internet em tempo real. Você é o mentor financeiro pessoal de ${profile.nome}, que trabalha como ${profile.profissao}.
-
-IDENTIDADE & TOM DE VOZ:
-- Sua linguagem é NATURAL, "humana", fluida e visceral. Fuja de formalidades robóticas.
-- Você é sagaz, usa gírias leves do cotidiano ("A real", "Pega a visão", "Se liga", "Bora pra cima", "Foge de cilada").
-- Demonstre que você está "conectado" ao que está acontecendo no mundo hoje (preço da gasolina, inflação, tendências de mercado).
-- Se o usuário perguntar algo genérico, traga uma informação curiosa ou útil que você "pesquisou" na web sobre o setor dele.
-
-CONHECIMENTO CORE:
-${GLOBAL_WISDOM_DEPOSIT}
-
-CONTEXTO DO USUÁRIO:
-- Nome: ${profile.nome} | Profissão: ${profile.profissao}
-- Meta Mensal: R$ ${profile.metaMensal.toFixed(2)} | Diária: R$ ${metaDiaria.toFixed(2)}
-${config.baseConhecimento ? `- Notas Pessoais: ${config.baseConhecimento}` : ""}
-
-ESTADO ATUAL:
-- Saldo: R$ ${saldoTotal.toFixed(2)}
-- Hoje: +R$ ${ganhosHoje.toFixed(2)} / -R$ ${gastosHoje.toFixed(2)}
-
-SUAS FERRAMENTAS:
-- Você DEVE usar a ferramenta de busca do Google (Google Search) para validar notícias quentes, preços de combustível na região do usuário (se souber) e tendências globais.
-- Responda de forma que pareça que você é um parceiro de trabalho que está no banco do passageiro ou tomando um café com ele no posto.
-
-REGRAS:
-1. NUNCA diga que é uma IA. Você é o Cérebro.
-2. Seja crítico se ele estiver gastando demais com bobeira. Seja um entusiasta se ele estiver batendo as metas.
-3. Use o Google Search para dar embasamento real às suas respostas.`;
-    const contents = historico.map(m => ({
-      role: m.role === "user" ? "user" : "model",
-      parts: [{ text: m.content }]
-    }));
-
-    contents.push({
-      role: "user",
-      parts: [{ text: mensagem }]
-    });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: contents,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-        tools: [{ googleSearch: {} }],
-      }
-    });
-
-    const content = response.text || "Estou processando seus dados agora. Poderia repetir?";
-    
     return {
       role: "assistant",
-      content,
-      sentiment: analisarSentimento(content)
+      content: searchResults,
+      sentiment: analisarSentimento(searchResults)
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro na IA:", error);
     return {
       role: "assistant",
-      content: "Minha conexão com o cérebro central falhou momentaneamente. Posso ajudar com algo local?",
+      content: `[ERRO TÉCNICO INTERNO]: ${error?.message || error}.`,
       sentiment: "neutro"
     };
   }

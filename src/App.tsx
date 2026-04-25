@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "motion/react";
 import Markdown from "react-markdown";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { GoogleGenAI, Type } from "@google/genai";
 import {
   gerarInsightsNativos,
   AIInsight,
@@ -1787,7 +1786,7 @@ export default function App() {
         <main ref={mainRef} className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-950">
           <motion.div 
             className="h-full flex" 
-            animate={{ x: `-${["resumo", "adicionar", "historico"].indexOf(tabAtual) * 100}%` }}
+            animate={{ x: `-${["resumo", "adicionar", "historico"].indexOf(tabAtual) * 33.333333}%` }}
             transition={{ type: "spring", stiffness: 260, damping: 28, mass: 0.5 }}
             style={{ width: '300%' }}
             drag="x"
@@ -3519,63 +3518,8 @@ function FormularioLancamento({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const lerRecibo = async (file: File) => {
-    try {
-      setProcessandoRecibo(true);
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64Data = (reader.result as string).split(',')[1];
-          const apiKey = process.env.GEMINI_API_KEY;
-          if (!apiKey) {
-             alert("Chave da Inteligência Central não configurada no ambiente!");
-             setProcessandoRecibo(false);
-             return;
-          }
-          const ai = new GoogleGenAI({ apiKey });
-          
-          const prompt = `Você é o Cérebro Analítico do AutoCaixa. Sua sabedoria financeira permite extrair dados com precisão cirúrgica de qualquer recibo ou nota fiscal, mesmo que a imagem esteja borrada ou incompleta.
-
-Sua tarefa:
-1. Identificar o valor total (numérico).
-2. Definir uma descrição curta e inteligente (ex: "Abastecimento Posto BR", "Troca de Óleo", "Lanche Drive-thru").
-3. Capturar a data (YYYY-MM-DD).
-
-Responda ESTRITAMENTE em JSON puro, sem blocos de código ou markdown:
-{
-  "valor": <número decimal>, 
-  "descricao": "<texto curto e sábio>", 
-  "data": "<YYYY-MM-DD>"
-}
-
-Se encontrar múltiplos valores, escolha o TOTAL final pago. Se a data não for legível, use a data de hoje: ${getLocalISODate()}.`;
-
-          const response = await ai.models.generateContent({
-             model: "gemini-3-flash-preview",
-             contents: {
-               parts: [
-                 { inlineData: { data: base64Data, mimeType: file.type } },
-                 { text: prompt }
-               ]
-             },
-             config: { responseMimeType: "application/json" }
-          });
-          
-          if (response.text) {
-             const json = JSON.parse(response.text);
-             if (json.valor) setValor(json.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 }));
-             if (json.descricao) setDesc(json.descricao.substring(0, 50));
-             if (json.data && /^\d{4}-\d{2}-\d{2}$/.test(json.data)) setData(json.data);
-          }
-        } catch (e) {
-          console.error("Erro ao ler recibo:", e);
-        } finally {
-          setProcessandoRecibo(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch(e) {
-      setProcessandoRecibo(false);
-    }
+    alert("A leitura de recibos via IA foi desativada.");
+    return;
   };
 
   const formatCurrencyEntry = (v: string) => {
