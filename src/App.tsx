@@ -729,7 +729,8 @@ export default function App() {
     if (found) return found.nome;
 
     if (t.categoria && t.categoria !== "outros") {
-      return t.categoria.charAt(0).toUpperCase() + t.categoria.slice(1);
+      const cleanCat = t.categoria.startsWith("custom_") ? t.categoria.replace("custom_", "") : t.categoria;
+      return cleanCat.charAt(0).toUpperCase() + cleanCat.slice(1);
     }
     return "Outros";
   };
@@ -1430,23 +1431,39 @@ export default function App() {
     });
 
     const todasCategoriasGastos = Object.entries(catGastos)
-      .map(([id, valor]) => ({
-        id,
-        valor,
-        nome: CATEGORIAS_DESPESA.find((c) => c.id === id)?.nome || "Outros",
-        pct: (valor / (rMes.despesas || 1)) * 100,
-      }))
+      .map(([id, valor]) => {
+        let nome = CATEGORIAS_DESPESA.find((c) => c.id === id)?.nome;
+        if (!nome) {
+          nome = id.startsWith("custom_") 
+            ? id.replace("custom_", "").charAt(0).toUpperCase() + id.replace("custom_", "").slice(1) 
+            : "Outros";
+        }
+        return {
+          id,
+          valor,
+          nome,
+          pct: (valor / (rMes.despesas || 1)) * 100,
+        };
+      })
       .sort((a, b) => b.valor - a.valor);
 
     const topCat = todasCategoriasGastos.slice(0, 5);
 
     const rFonte = Object.entries(fonteReceitas)
-      .map(([id, valor]) => ({
-        id,
-        valor,
-        nome: CATEGORIAS_RECEITA.find((c) => c.id === id)?.nome || "Outros",
-        pct: (valor / (rMes.receitas || 1)) * 100,
-      }))
+      .map(([id, valor]) => {
+        let nome = CATEGORIAS_RECEITA.find((c) => c.id === id)?.nome;
+        if (!nome) {
+          nome = id.startsWith("custom_") 
+            ? id.replace("custom_", "").charAt(0).toUpperCase() + id.replace("custom_", "").slice(1) 
+            : "Outros";
+        }
+        return {
+          id,
+          valor,
+          nome,
+          pct: (valor / (rMes.receitas || 1)) * 100,
+        };
+      })
       .sort((a, b) => b.valor - a.valor);
 
     const somaReceitas7Dias = dias.reduce((acc, d) => acc + d.receitas, 0);
@@ -2373,7 +2390,7 @@ export default function App() {
                       </div>
                     </div>
                     <div 
-                      className="h-[240px] w-full outline-none focus:outline-none mt-2"
+                      className="h-[300px] w-full outline-none focus:outline-none mt-2"
                       onPointerDown={(e) => e.stopPropagation()}
                     >
                       <ResponsiveContainer
@@ -3310,19 +3327,26 @@ function FormularioLancamento({
     const valorNumerico = Number(valor.replace(/\./g, "").replace(",", "."));
     if (isNaN(valorNumerico) || valorNumerico <= 0) return;
     if (!cat) return;
+    
+    let categoriaFinal = cat;
+    if (cat === "custom_") {
+      categoriaFinal = "outros";
+    }
 
     // Fallback para descrição baseado na categoria se estiver vazia
     const descricaoFinal =
       desc.trim() ||
       (tipo === "receita"
-        ? categoriasReceita.find((c) => c.id === cat)?.nome
-        : categoriasDespesa.find((c) => c.id === cat)?.nome) ||
-      "Lançamento";
+        ? categoriasReceita.find((c) => c.id === categoriaFinal)?.nome
+        : categoriasDespesa.find((c) => c.id === categoriaFinal)?.nome) ||
+      (categoriaFinal.startsWith("custom_") 
+        ? categoriaFinal.replace("custom_", "").charAt(0).toUpperCase() + categoriaFinal.replace("custom_", "").slice(1) 
+        : "Lançamento");
 
     aoSalvar({
       tipo,
       valor: valorNumerico,
-      categoria: cat,
+      categoria: categoriaFinal,
       data,
       descricao: descricaoFinal,
       custoFixo: (tipo === "despesa") ? custoFixo : undefined,
@@ -3395,14 +3419,21 @@ function FormularioLancamento({
 
       <div className="mb-6">
         <label className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1 block mb-3">Categoria</label>
-        <div className="flex overflow-x-auto custom-scrollbar gap-2 pb-2 px-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-2 px-1">
           {(tipo === "receita" ? categoriasReceita : categoriasDespesa).map(
             (c) => (
               <motion.button
                 key={c.id}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => { setCat(c.id); vibrar(10); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 border transition-all ${cat === c.id ? (tipo === "receita" ? "bg-green-500 border-green-500 text-white shadow-md shadow-green-500/20" : "bg-red-500 border-red-500 text-white shadow-md shadow-red-500/20") : "bg-transparent border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
+                onClick={() => { 
+                  if (c.id === "outros") {
+                    setCat("custom_");
+                  } else {
+                    setCat(c.id); 
+                  }
+                  vibrar(10); 
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shrink-0 border transition-all justify-center ${cat === c.id || (c.id === "outros" && cat.startsWith("custom_")) ? (tipo === "receita" ? "bg-green-500 border-green-500 text-white shadow-md shadow-green-500/20" : "bg-red-500 border-red-500 text-white shadow-md shadow-red-500/20") : "bg-transparent border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
               >
                 <c.icone size={14} strokeWidth={2.5} />
                 <span className="text-[11px] font-bold tracking-wide">
@@ -3412,6 +3443,23 @@ function FormularioLancamento({
             ),
           )}
         </div>
+        
+        {cat.startsWith("custom_") && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }} 
+            animate={{ opacity: 1, height: 'auto' }} 
+            className="mt-2 px-1"
+          >
+            <input
+              type="text"
+              placeholder="Digite o nome da categoria"
+              value={cat.replace("custom_", "")}
+              onChange={(e) => setCat("custom_" + e.target.value)}
+              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-800 dark:text-gray-200 outline-none focus:border-primary-500 transition-colors"
+              autoFocus
+            />
+          </motion.div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6 px-1">
