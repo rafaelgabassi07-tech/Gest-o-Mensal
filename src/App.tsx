@@ -826,6 +826,35 @@ export default function App() {
   const [isAddingCF, setIsAddingCF] = useState(false);
   const [novoCF, setNovoCF] = useState({ descricao: "", valor: "", diaVencimento: "5", categoria: "moradia" });
 
+  const [touchStart, setTouchStart] = useState<{x: number, y: number} | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{x: number, y: number} | null>(null);
+  const swipeThreshold = 50;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+  };
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    
+    if (Math.abs(distanceX) > swipeThreshold && Math.abs(distanceX) > Math.abs(distanceY) * 1.5) {
+      const tabs: ("resumo" | "adicionar" | "historico")[] = ["resumo", "adicionar", "historico"];
+      const currentIndex = tabs.indexOf(tabAtual);
+      if (distanceX > 0 && currentIndex < tabs.length - 1) {
+        setTabAtual(tabs[currentIndex + 1]);
+        setTransacaoEmEdicao(null);
+      } else if (distanceX < 0 && currentIndex > 0) {
+        setTabAtual(tabs[currentIndex - 1]);
+        setTransacaoEmEdicao(null);
+      }
+    }
+  };
+
   // --- Funções de Feedback ---
   const vibrar = (ms: number | number[] = 10) => {
     if (
@@ -1006,27 +1035,60 @@ export default function App() {
       const doc = new jsPDF();
       const hoje = new Date();
       const dataStr = hoje.toLocaleDateString('pt-BR');
+      const horaStr = hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' });
       
-      doc.setFontSize(22);
-      doc.setTextColor(59, 130, 246); // Blue-500
+      // Cores
+      const corPrimaria: [number, number, number] = [16, 185, 129]; // emerald-500
+      const corTexto: [number, number, number] = [31, 41, 55]; // gray-800
+      const corDespesa: [number, number, number] = [239, 68, 68]; // red-500
+      const corNeutro: [number, number, number] = [107, 114, 128]; // gray-500
+      
+      // Header
+      doc.setFontSize(24);
+      doc.setTextColor(corTexto[0], corTexto[1], corTexto[2]);
       doc.text("AutoCaixa", 14, 22);
       
-      doc.setFontSize(12);
-      doc.setTextColor(100);
-      doc.text(`Relatório Financeiro Gerencial - ${dataStr}`, 14, 30);
+      doc.setFontSize(10);
+      doc.setTextColor(corNeutro[0], corNeutro[1], corNeutro[2]);
+      doc.text(`Relatório Financeiro Gerencial`, 14, 28);
+      doc.text(`Emitido em: ${dataStr} às ${horaStr}`, 14, 33);
+      
+      const mesAtual = hoje.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+      doc.text(`Período de Referência: ${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)}`, 14, 38);
+
+      // Linha divisória
+      doc.setDrawColor(229, 231, 235);
+      doc.line(14, 42, 196, 42);
       
       const receitasTotal = transacoes.filter(t => t.tipo === "receita").reduce((acc, t) => acc + t.valor, 0);
       const despesasTotal = transacoes.filter(t => t.tipo === "despesa").reduce((acc, t) => acc + t.valor, 0);
       const saldo = receitasTotal - despesasTotal;
 
+      // Resumo em caixas
       doc.setFontSize(14);
-      doc.setTextColor(20);
-      doc.text("Resumo do Período", 14, 45);
+      doc.setTextColor(corTexto[0], corTexto[1], corTexto[2]);
+      doc.text("Síntese do Período", 14, 52);
       
       doc.setFontSize(10);
-      doc.text(`Total Entradas: R$ ${receitasTotal.toFixed(2)}`, 14, 55);
-      doc.text(`Total Saídas: R$ ${despesasTotal.toFixed(2)}`, 14, 62);
-      doc.text(`Lucro Líquido: R$ ${saldo.toFixed(2)}`, 14, 69);
+      doc.setTextColor(corNeutro[0], corNeutro[1], corNeutro[2]);
+      doc.text("Receitas Totais", 14, 60);
+      doc.setFontSize(12);
+      doc.setTextColor(corPrimaria[0], corPrimaria[1], corPrimaria[2]);
+      doc.text(`+ R$ ${receitasTotal.toFixed(2).replace('.', ',')}`, 14, 66);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(corNeutro[0], corNeutro[1], corNeutro[2]);
+      doc.text("Despesas Totais", 74, 60);
+      doc.setFontSize(12);
+      doc.setTextColor(corDespesa[0], corDespesa[1], corDespesa[2]);
+      doc.text(`- R$ ${despesasTotal.toFixed(2).replace('.', ',')}`, 74, 66);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(corNeutro[0], corNeutro[1], corNeutro[2]);
+      doc.text("Saldo Líquido", 134, 60);
+      doc.setFontSize(14);
+      doc.setTextColor(saldo >= 0 ? corPrimaria[0] : corDespesa[0], saldo >= 0 ? corPrimaria[1] : corDespesa[1], saldo >= 0 ? corPrimaria[2] : corDespesa[2]);
+      doc.text(`R$ ${saldo.toFixed(2).replace('.', ',')}`, 134, 66);
 
       // Table of expenses
       const expenses = transacoes.filter(t => t.tipo === "despesa");
@@ -1038,26 +1100,30 @@ export default function App() {
       
       const tableData = Object.entries(catsMap)
         .sort((a, b) => b[1] - a[1])
-        .map(([cat, val]) => [cat, `R$ ${val.toFixed(2)}`]);
+        .map(([cat, val]) => [cat, `R$ ${val.toFixed(2).replace('.', ',')}`]);
+
+      let finalY = 75;
 
       if (tableData.length > 0) {
         doc.setFontSize(14);
-        doc.text("Resumo de Gastos", 14, 85);
+        doc.setTextColor(corTexto[0], corTexto[1], corTexto[2]);
+        doc.text("Despesas por Categoria", 14, 85);
         autoTable(doc, {
           startY: 90,
           head: [['Categoria', 'Valor Total']],
           body: tableData,
-          theme: 'grid',
-          headStyles: { fillColor: [59, 130, 246] }
+          theme: 'striped',
+          headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255], fontStyle: 'bold' },
+          styles: { fontSize: 10, cellPadding: 4 },
+          columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
         });
+        finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY : 85;
       }
-
-      const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY : 85;
       
       // Auto-IA Veredito (Simple based on margin)
       doc.setFontSize(14);
-      doc.setTextColor(20);
-      doc.text("Veredito IA", 14, finalY + 15);
+      doc.setTextColor(corTexto[0], corTexto[1], corTexto[2]);
+      doc.text("Análise de Performance", 14, finalY + 15);
       
       let margem = 0;
       if (receitasTotal > 0) {
@@ -1065,19 +1131,62 @@ export default function App() {
       }
       
       let veredito = "";
+      let emoji = "";
       if (margem > 40) {
-        veredito = "Excelente gestão! Sua margem de lucro está alta e os seus custos fixos estão muito bem controlados. Continue com a estratégia atual.";
+        emoji = "EXCELENTE";
+        veredito = "A margem de lucro operacional está substancial e os custos fixos demonstram otimização. Recomenda-se manter a estratégia de alocação de recursos e considerar reservas financeiras ou reinvestimentos para expansão.";
       } else if (margem > 15) {
-        veredito = "Gestão equilibrada. Você está com lucro, mas vale a pena investigar detalhadamente os gastos e cortar pequenas despesas supérfluas.";
+        emoji = "MODERADO";
+        veredito = "Sua operação encontra-se saudável, com lucratividade positiva, contudo observa-se oportunidade de aumento da eficiência. Recomenda-se analisar detalhadamente o quadro de despesas buscando reduzir custos logísticos ou de manutenção não-essenciais.";
       } else {
-        veredito = "Alerta: Seus gastos estão muito próximos (ou superando) a sua receita. Corte imediatamente assinaturas ou custos de manutenção desnecessários e tente focar em horários/corridas de maior rentabilidade.";
+        emoji = "ALERTA CRÍTICO";
+        veredito = "A relação entre receitas e despesas indica compressão severa de margens operacionais. É imperativa a revisão imediata dos custos correntes e estratégias para redução de despesas fixas ou aumento direto de ticket de venda.";
       }
 
+      doc.setFontSize(11);
+      doc.setTextColor(17, 24, 39);
+      doc.text(`Status: ${emoji}`, 14, finalY + 25);
+      
       doc.setFontSize(10);
-      doc.setTextColor(80);
+      doc.setTextColor(corNeutro[0], corNeutro[1], corNeutro[2]);
       const maxLineWidth = 180;
       const textLines = doc.splitTextToSize(veredito, maxLineWidth);
-      doc.text(textLines, 14, finalY + 25);
+      doc.text(textLines, 14, finalY + 31);
+      
+      // Últimas 5 transações
+      const recentT = transacoes.slice(0, 5).map(t => [
+          formatarDataBR(t.data),
+          t.tipo === 'receita' ? 'Entrada' : 'Saída',
+          t.descricao || 'Geral',
+          `R$ ${t.valor.toFixed(2).replace('.', ',')}`
+      ]);
+      
+      if (recentT.length > 0) {
+          const table2Y = finalY + 35 + (textLines.length * 5);
+          doc.setFontSize(14);
+          doc.setTextColor(corTexto[0], corTexto[1], corTexto[2]);
+          doc.text("Lançamentos Recentes", 14, table2Y);
+          
+          autoTable(doc, {
+              startY: table2Y + 5,
+              head: [['Data', 'Tipo', 'Descrição', 'Valor']],
+              body: recentT,
+              theme: 'grid',
+              headStyles: { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold' },
+              styles: { fontSize: 9, cellPadding: 3 },
+              didParseCell: function(data) {
+                  if (data.section === 'body' && data.column.index === 1) {
+                      if (data.cell.raw === 'Entrada') {
+                          data.cell.styles.textColor = corPrimaria;
+                          data.cell.styles.fontStyle = 'bold';
+                      } else {
+                          data.cell.styles.textColor = corDespesa;
+                          data.cell.styles.fontStyle = 'bold';
+                      }
+                  }
+              }
+          });
+      }
 
       doc.save(`Relatorio_AutoCaixa_${getLocalISODate()}.pdf`);
       mostrarToast("Relatório PDF Gerado!", "sucesso");
@@ -1154,18 +1263,18 @@ export default function App() {
 
   const exportarCSV = () => {
     try {
-      const cabecalho = ["Data", "Tipo", "Categoria", "Valor", "Descricao"].join(";");
+      const cabecalho = ["Data", "Tipo", "Categoria", "Valor", "Descricao", "Tags", "Custo Fixo"].join(";");
       const linhas = transacoes.map((t) => {
         const catArray = t.tipo === "receita" ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA;
         const categoriaNome = catArray.find((c) => c.id === t.categoria)?.nome || t.categoria;
         
-        // Trata a descrição escapando aspas se necessário (formato CSV)
-        let descricaoLimpa = t.descricao.replace(/;/g, ",").replace(/\n/g, " ");
+        let descricaoLimpa = (t.descricao || "Geral").replace(/;/g, ",").replace(/\n/g, " ");
         if (descricaoLimpa.includes(",")) {
             descricaoLimpa = `"${descricaoLimpa}"`;
         }
 
-        // Formata o valor sem o R$ para planilha
+        const tagsLimpa = (t.tags || []).join(", ");
+        const fixo = t.custoFixo ? "Sim" : "Não";
         const valorFormatado = t.valor.toFixed(2).replace(".", ",");
         
         return [
@@ -1174,6 +1283,8 @@ export default function App() {
           categoriaNome,
           valorFormatado,
           descricaoLimpa,
+          tagsLimpa,
+          fixo
         ].join(";");
       });
 
@@ -1185,7 +1296,7 @@ export default function App() {
       link.href = URL.createObjectURL(blob);
       link.download = `AutoCaixa_extrato_${getLocalISODate()}.csv`;
       link.click();
-      mostrarToast("Extrato exportado!");
+      mostrarToast("Extrato exportado com sucesso!");
     } catch {
       mostrarToast("Erro ao exportar", "erro");
     }
@@ -1607,7 +1718,13 @@ export default function App() {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-950">
+        <main 
+          ref={mainRef} 
+          className="flex-1 relative overflow-hidden bg-gray-50 dark:bg-gray-950"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <motion.div 
             className="h-full flex" 
             animate={{ x: `-${["resumo", "adicionar", "historico"].indexOf(tabAtual) * 33.333333}%` }}
