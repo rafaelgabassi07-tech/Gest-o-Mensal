@@ -93,6 +93,22 @@ import {
   Legend,
 } from "recharts";
 
+const Logo = ({ className = "", showIcon = true, iconSize = 20, textSize = "text-2xl sm:text-3xl" }: { className?: string, showIcon?: boolean, iconSize?: number, textSize?: string }) => (
+  <div className={`flex items-center gap-3 w-max ${className}`}>
+    {showIcon && (
+      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-primary-500/30 relative overflow-hidden group`}>
+        <div className="absolute inset-0 bg-white/20 transform -translate-x-full hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+        <Wallet size={iconSize} strokeWidth={2.5} />
+      </div>
+    )}
+    <div className="min-w-0 flex items-baseline gap-0.5">
+      <h1 className={`${textSize} font-extrabold tracking-tighter leading-none text-gray-900 dark:text-white display-font shrink-0`}>
+        Auto<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
+      </h1>
+    </div>
+  </div>
+);
+
 import {
   TipoTransacao,
   Transacao,
@@ -455,48 +471,40 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
           {step === 0 && (
             <motion.div 
               key="intro"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="text-center space-y-8 sm:space-y-12"
+              className="text-left space-y-12 max-w-sm mx-auto"
             >
-              <div className="relative inline-block">
-                <div className="absolute inset-0 bg-primary-500 blur-3xl opacity-30 rounded-full animate-pulse" />
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] bg-gradient-to-br from-primary-400 to-primary-600 text-white shadow-2xl flex items-center justify-center mx-auto ring-4 ring-white/10 dark:ring-gray-900/50">
-                  <Sparkles size={48} className="drop-shadow-md" />
-                </div>
-              </div>
+              <Logo showIcon={true} iconSize={24} textSize="text-5xl" className="mx-auto flex-col mb-12 gap-6 items-center text-center justify-center" />
               
-              <div className="space-y-4">
-                <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white leading-[1.1]">
-                  Bem-vindo ao <br/>
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-indigo-600">AutoCaixa Pro</span>
+              <div className="space-y-4 text-center">
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tighter text-gray-900 dark:text-white leading-[1.1]">
+                  A inteligência <br/> definitiva para as <br/>suas finanças.
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-medium max-w-[280px] sm:max-w-md mx-auto leading-relaxed">
-                  O controle financeiro projetado para quem faz o seu próprio salário e para quem quer multiplicar seus ganhos.
+                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mx-auto leading-relaxed">
+                  Sem burocracia. Projetado para autônomos que desejam profissionalizar o caixa.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-left">
+              <div className="flex flex-col gap-6 py-4">
                 {[
-                  { icon: Target, title: "Foco a Laser", desc: "Suas metas viram realidade diaria." },
-                  { icon: ShieldCheck, title: "100% Privado", desc: "Seus dados nunca saem do seu celular." },
-                  { icon: TrendingUp, title: "Lucro Real", desc: "Acompanhe o que sobra de verdade no bolso." }
+                  { icon: Target, title: "Foco Híper-Direcionado", desc: "Suas metas em evidência, guiando seu esforço." },
+                  { icon: ShieldCheck, title: "Arquitetura Zero-Trust", desc: "Seus dados permanecem apenas no seu aparelho." },
+                  { icon: Activity, title: "Monitoramento Preciso", desc: "Relatórios instântaneos e feedback contínuo." }
                 ].map((feature, i) => (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 + (i * 0.1) }}
                     key={i} 
-                    className="flex sm:flex-col items-center sm:items-start gap-4 sm:gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 hover:border-primary-500/30 transition-colors"
+                    className="flex text-left gap-4 items-start"
                   >
-                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center shrink-0">
-                      <feature.icon size={20} className="text-primary-500" />
-                    </div>
+                    <feature.icon size={22} className="text-primary-500 mt-0.5 shrink-0" strokeWidth={2.5} />
                     <div>
-                      <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-900 dark:text-white">{feature.title}</h3>
-                      <p className="text-[10px] text-gray-500 mt-1 leading-relaxed font-medium hidden sm:block">{feature.desc}</p>
+                      <h3 className="text-sm font-extrabold uppercase tracking-wide text-gray-900 dark:text-white mb-1">{feature.title}</h3>
+                      <p className="text-xs text-gray-500 font-medium leading-relaxed">{feature.desc}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -504,9 +512,9 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
 
               <button 
                 onClick={() => { vibrar(15); setStep(1); }}
-                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-gray-900/20 dark:shadow-white/10 active:scale-[0.98] transition-all hover:bg-gray-800 dark:hover:bg-gray-100"
+                className="w-full h-14 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-bold text-sm shadow-2xl shadow-gray-900/10 dark:shadow-white/5 active:scale-[0.98] transition-all"
               >
-                Configurar Meu Caixa
+                Configurar Meu Ambiente
               </button>
             </motion.div>
           )}
@@ -518,14 +526,14 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
               animate={{ opacity: 1, x: 0 }} 
               exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="space-y-10 text-center"
+              className="space-y-12 text-left"
             >
-              <div className="space-y-3">
-                <span className="inline-block px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em]">Identidade</span>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Como devo te chamar?</h2>
+              <div className="space-y-2">
+                <span className="text-primary-500 text-[10px] font-extrabold uppercase tracking-[0.2em]">Identidade</span>
+                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tighter">Como devo te chamar?</h2>
               </div>
               
-              <div className="relative group py-6 max-w-sm mx-auto">
+              <div className="relative py-8 border-b-2 border-gray-100 dark:border-gray-800 focus-within:border-primary-500 transition-colors">
                 <input 
                   type="text" 
                   value={nome}
@@ -538,20 +546,16 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
                   }}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Seu primeiro nome"
-                  className="w-full bg-transparent text-center text-4xl sm:text-5xl font-black text-gray-900 dark:text-white outline-none placeholder:text-gray-200 dark:placeholder:text-gray-800 transition-all placeholder:font-bold"
-                />
-                <motion.div 
-                  className="h-1.5 mx-auto bg-primary-500 rounded-full mt-4" 
-                  animate={{ width: nome.length > 0 ? "100%" : "3rem", opacity: nome.length > 0 ? 1 : 0.3 }}
+                  className="w-full bg-transparent text-left text-5xl font-black text-gray-900 dark:text-white outline-none placeholder:text-gray-300 dark:placeholder:text-gray-800 transition-all placeholder:font-black pb-2"
                 />
               </div>
 
               <button 
                 disabled={!nome.trim() || nome.trim().length < 1}
                 onClick={() => { vibrar(10); setStep(2); }}
-                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl disabled:opacity-20 disabled:scale-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full h-14 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-bold text-sm shadow-2xl disabled:opacity-20 disabled:scale-100 active:scale-[0.98] transition-all"
               >
-                Avançar
+                Continuar
               </button>
             </motion.div>
           )}
@@ -563,38 +567,38 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
               animate={{ opacity: 1, x: 0 }} 
               exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="space-y-8 text-center"
+              className="space-y-12 text-left"
             >
-              <div className="space-y-3">
-                <span className="inline-block px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em]">Perfil de Ganhos</span>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Qual sua área de atuação?</h2>
-                <p className="text-xs text-gray-500 font-medium max-w-xs mx-auto">Isso nos ajudará a personalizar as categorias de receitas e despesas.</p>
+              <div className="space-y-2">
+                <span className="text-primary-500 text-[10px] font-extrabold uppercase tracking-[0.2em]">Configuração do Domínio</span>
+                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tighter">Sua área de atuação?</h2>
+                <p className="text-xs text-gray-500 font-medium max-w-sm">Estruturaremos o escopo de despesas e lucros com base no seu perfil operacional.</p>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {Object.entries(PROFISSOES_CONFIG).map(([key, cfg]) => (
                   <button
                     key={key}
-                    onClick={() => { vibrar(15); setProfissao(key); }}
-                    className={`group relative p-4 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-3 text-center overflow-hidden h-28 ${
+                    onClick={() => { vibrar(5); setProfissao(key); }}
+                    className={`group text-left border-b-2 pb-4 transition-all pr-2 ${
                       profissao === key 
-                        ? "bg-primary-500 border-primary-500 text-white shadow-xl shadow-primary-500/20 scale-100" 
-                        : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:scale-[1.02]"
+                        ? 'border-primary-500 text-primary-600 dark:text-primary-400' 
+                        : 'border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-600 hover:border-gray-300 dark:hover:border-gray-700'
                     }`}
                   >
-                    <div className={`p-2 rounded-2xl transition-colors ${profissao === key ? 'bg-white/20' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                      <cfg.icone size={24} className={profissao === key ? "text-white" : "text-gray-500 group-hover:text-primary-500"} />
+                    <div className="flex items-center gap-3">
+                      <cfg.icone size={20} strokeWidth={2.5} className={profissao === key ? "text-primary-500" : "text-gray-300 dark:text-gray-700"} />
+                      <span className={`text-sm tracking-wide ${profissao === key ? 'font-black' : 'font-bold'}`}>{cfg.titulo}</span>
                     </div>
-                    <span className="text-[10px] font-black leading-tight uppercase tracking-wide">{cfg.titulo}</span>
                   </button>
                 ))}
               </div>
 
               <button 
                 onClick={() => { vibrar(10); setStep(3); }}
-                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full h-14 bg-gray-900 dark:bg-white text-white dark:text-gray-950 rounded-2xl font-bold text-sm shadow-2xl active:scale-[0.98] transition-all"
               >
-                Confirmar
+                Avançar
               </button>
             </motion.div>
           )}
@@ -606,16 +610,16 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
               animate={{ opacity: 1, x: 0 }} 
               exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="space-y-10 text-center"
+              className="space-y-12 text-left"
             >
-              <div className="space-y-3">
-                <span className="inline-block px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em]">O Grande Objetivo</span>
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Qual sua Meta de Lucro?</h2>
-                <p className="text-gray-500 text-xs font-medium max-w-xs mx-auto">Quanto você quer que sobre <b>limpo</b> no seu bolso este mês?</p>
+              <div className="space-y-2">
+                <span className="text-primary-500 text-[10px] font-extrabold uppercase tracking-[0.2em]">O Alvo Financeiro</span>
+                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tighter">Meta de lucro líquido?</h2>
+                <p className="text-gray-500 text-xs font-medium max-w-sm">Estabeleça o montante líquido que deseja extrair neste mês.</p>
               </div>
 
-              <div className="relative max-w-[240px] mx-auto py-4">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-300 dark:text-gray-700">R$</span>
+              <div className="relative py-8 border-b-2 border-gray-100 dark:border-gray-800 focus-within:border-primary-500 transition-colors">
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-3xl font-black text-gray-300 dark:text-gray-700">R$</span>
                 <input 
                   type="number" 
                   value={meta}
@@ -625,33 +629,34 @@ const Onboarding = ({ onComplete, vibrar }: { onComplete: (profile: UserProfile)
                     }
                   }}
                   onChange={(e) => setMeta(e.target.value)}
-                  className="w-full pl-12 pr-4 bg-transparent text-left text-5xl font-black text-gray-900 dark:text-white outline-none"
+                  className="w-full bg-transparent text-left pl-14 text-5xl font-black text-gray-900 dark:text-white outline-none display-font pb-2"
+                  autoFocus
                 />
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 to-indigo-500 rounded-full opacity-50" />
               </div>
 
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50 flex flex-col items-center gap-2"
+                className="flex items-start gap-4"
               >
-                <Target size={24} className="text-indigo-500 mb-1" />
-                <p className="text-xs text-indigo-900/70 dark:text-indigo-300/70 font-bold uppercase tracking-widest">
-                  Para bater essa meta, mire em:
-                </p>
-                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                  R$ {Math.round(Number(meta) / 22).toLocaleString('pt-BR')} <span className="text-xs font-bold text-indigo-900/50 dark:text-indigo-300/50 tracking-wider">/dia</span>
+                <Target size={24} className="text-primary-500 mt-1 shrink-0" strokeWidth={2.5}/>
+                <div>
+                   <p className="text-[10px] text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-widest mb-1">
+                     Diretriz de Execução (22 Dias)
+                   </p>
+                   <div className="text-2xl font-black text-gray-900 dark:text-white">
+                     R$ {Math.round(Number(meta) / 22).toLocaleString('pt-BR')} <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">/ dia</span>
+                   </div>
                 </div>
-                <p className="text-[10px] text-indigo-900/50 dark:text-indigo-300/50 font-semibold italic mt-1">Considerando 22 dias trabalhados</p>
               </motion.div>
 
               <button 
                 disabled={Number(meta) <= 0}
                 onClick={() => onComplete({ nome, profissao, metaMensal: Number(meta), primeiroAcesso: false })}
-                className="w-full h-16 bg-primary-600 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-primary-500/20 hover:bg-primary-700 active:scale-[0.98] transition-all disabled:opacity-50"
+                className="w-full h-14 bg-primary-600 text-white rounded-2xl font-bold text-sm shadow-2xl shadow-primary-500/20 hover:bg-primary-700 active:scale-[0.98] transition-all disabled:opacity-50"
               >
-                Finalizar Setup e Entrar
+                Iniciar Setup Financeiro
               </button>
             </motion.div>
           )}
@@ -1674,15 +1679,7 @@ export default function App() {
                 setTabAtual("resumo");
               }}
             >
-              <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-sm shadow-primary-500/30 flex items-center justify-center text-white shrink-0 overflow-hidden">
-                <div className="absolute inset-0 bg-white/20 transform -translate-x-full hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                <Wallet size={20} strokeWidth={2.5} />
-              </div>
-              <div className="min-w-0 flex items-baseline gap-0.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tighter leading-none text-gray-900 dark:text-white display-font shrink-0">
-                  Auto<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
-                </h1>
-              </div>
+              <Logo />
             </motion.div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -3332,8 +3329,16 @@ function FormularioLancamento({
   };
 
   return (
-    <div className="min-h-full flex flex-col pb-8 w-full max-w-lg mx-auto">
-      <div className="flex p-1 rounded-xl mb-2 shrink-0 bg-transparent flex-row justify-center space-x-4">
+    <div 
+      className="min-h-full flex flex-col pb-8 w-full max-w-lg mx-auto"
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div 
+        className="flex p-1 rounded-xl mb-2 shrink-0 bg-transparent flex-row justify-center space-x-4"
+      >
         <button
           onClick={() => { setTipo("receita"); vibrar(10); }}
           className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border-b-2 ${tipo === "receita" ? "border-green-500 text-green-600" : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}

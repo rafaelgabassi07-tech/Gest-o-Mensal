@@ -49,6 +49,15 @@
 @variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  /* Hide scrollbars globally */
+  *::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
   body {
     @apply antialiased selection:bg-primary-100 selection:text-primary-900;
     -webkit-tap-highlight-color: transparent;
