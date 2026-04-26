@@ -96,15 +96,27 @@ import {
 const Logo = ({ className = "", showIcon = true, iconSize = 20, textSize = "text-2xl sm:text-3xl" }: { className?: string, showIcon?: boolean, iconSize?: number, textSize?: string }) => (
   <div className={`flex items-center gap-3 w-max ${className}`}>
     {showIcon && (
-      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-primary-500/30 relative overflow-hidden group`}>
-        <div className="absolute inset-0 bg-white/20 transform -translate-x-full hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-        <Wallet size={iconSize} strokeWidth={2.5} />
+      <div className="relative shrink-0 group">
+        {/* Subtle glow underneath */}
+        <div className="absolute -inset-1 bg-primary-500/30 blur-md rounded-2xl group-hover:bg-primary-500/40 transition-colors duration-500"></div>
+        {/* Main box */}
+        <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 text-white flex items-center justify-center shadow-[inset_0_1px_rgba(255,255,255,0.4),0_4px_12px_rgba(0,0,0,0.1)] border border-primary-500/50 overflow-hidden">
+          {/* Glass glare effect */}
+          <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent"></div>
+          {/* Shine on hover */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-700 ease-out" />
+          
+          <Wallet size={iconSize} strokeWidth={2.5} className="relative z-10 drop-shadow-sm" />
+        </div>
       </div>
     )}
     <div className="min-w-0 flex items-baseline gap-0.5">
       <h1 className={`${textSize} font-extrabold tracking-tighter leading-none text-gray-900 dark:text-white display-font shrink-0`}>
-        Auto<span className="bg-clip-text text-transparent bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-400 dark:to-primary-600">Caixa</span>
+        Auto<span className="text-primary-600 dark:text-primary-400">Caixa</span>
       </h1>
+      <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 translate-y-[2px]">
+        Pro
+      </span>
     </div>
   </div>
 );
