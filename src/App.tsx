@@ -1,4 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { app, auth, db, loginComGoogle, logout } from "./firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "motion/react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -847,6 +850,57 @@ export default function App() {
   const [touchStart, setTouchStart] = useState<{x: number, y: number} | null>(null);
   const [touchEnd, setTouchEnd] = useState<{x: number, y: number} | null>(null);
   const swipeThreshold = 50;
+
+  // --- Firebase Sync --
+  const [user, setUser] = useState<User | null>(null);
+  
+  useEffect(() => {
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        try {
+          const docRef = doc(db, "users", currentUser.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.transacoes) setTransacoes(data.transacoes);
+            if (data.profile) setUserProfile(data.profile);
+            if (data.metaDiaria) setMetaDiaria(data.metaDiaria);
+            if (data.corTema) setCorTema(data.corTema);
+            if (data.themeMode) setThemeMode(data.themeMode);
+            if (data.custosFixosBase) setCustosFixosBase(data.custosFixosBase);
+            mostrarToast("Dados sincronizados com a nuvem!");
+          }
+        } catch (error) {
+          console.error("Erro ao buscar dados do Firebase:", error);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user || !db) return;
+    const syncData = async () => {
+      try {
+        await setDoc(doc(db, "users", user.uid), {
+          transacoes,
+          profile: userProfile,
+          metaDiaria,
+          corTema,
+          themeMode,
+          custosFixosBase,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (error) {
+        console.error("Erro ao sincronizar com Firebase:", error);
+      }
+    };
+    
+    const timeout = setTimeout(syncData, 5000); // 5 seconds debounce
+    return () => clearTimeout(timeout);
+  }, [user, transacoes, userProfile, metaDiaria, corTema, themeMode, custosFixosBase]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -3180,6 +3234,59 @@ export default function App() {
 
                 {abaConfig === "Perfil" && (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    <div className="space-y-4">
+                       <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Conta & Sincronização</h4>
+                       <div className="bg-gray-50 dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 flex flex-col gap-3">
+                         {user ? (
+                           <>
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+                                 <User size={20} className="text-primary-600" />
+                               </div>
+                               <div>
+                                 <p className="text-sm font-bold text-gray-900 dark:text-white">{user.displayName || "Usuário"}</p>
+                                 <p className="text-[10px] text-gray-500">{user.email}</p>
+                               </div>
+                             </div>
+                             <button
+                               onClick={async () => {
+                                 try {
+                                   await logout();
+                                   mostrarToast("Logout realizado com sucesso");
+                                 } catch (error) {
+                                   mostrarToast("Erro ao fazer logout", "erro");
+                                 }
+                               }}
+                               className="w-full mt-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-colors"
+                             >
+                               Desconectar Conta
+                             </button>
+                           </>
+                         ) : (
+                           <>
+                             <p className="text-xs text-gray-500 font-medium">
+                               Conecte-se para sincronizar seus dados na nuvem automaticamente. (Requer Firebase configurado nas variáveis de ambiente)
+                             </p>
+                             <button
+                               onClick={async () => {
+                                 try {
+                                   await loginComGoogle();
+                                   mostrarToast("Login com Google realizado!");
+                                 } catch (error) {
+                                   console.error(error);
+                                   mostrarToast("Erro ao fazer login com Google. Verifique o console.", "erro");
+                                 }
+                               }}
+                               className="w-full mt-2 bg-primary-500 hover:bg-primary-600 text-white py-2 rounded-xl text-[11px] font-bold tracking-wide transition-colors flex items-center justify-center gap-2"
+                             >
+                               <span className="shrink-0 bg-white p-1 rounded-full text-primary-600"><User size={12} strokeWidth={3} /></span>
+                               Entrar com Google
+                             </button>
+                           </>
+                         )}
+                       </div>
+                    </div>
+
                     <div className="space-y-4">
                        <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">Dados de Apresentação</h4>
                        
